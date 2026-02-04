@@ -1,0 +1,8 @@
+{
+  "name": "Dashboard PFM",
+  "description": "A high-fidelity live streaming analytics dashboard inspired by professional e-commerce live tools. Features real-time KPI monitoring, viewer source breakdowns, performance trends, and AI-powered insights using Gemini.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
