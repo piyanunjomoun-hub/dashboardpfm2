@@ -150,7 +150,7 @@ const PFMChart = ({ products, onDeleteProduct }: { products: Product[], onDelete
             </tr>
           </thead>
           <tbody>
-            {filteredData.map((p, i) => (
+            {filteredData.length > 0 ? filteredData.map((p, i) => (
               <React.Fragment key={p.id}>
                 <tr className={`border-t border-gray-800/50 hover:bg-white/[0.03] cursor-pointer group transition-colors ${expandedRows[p.id] ? 'bg-cyan-500/[0.02]' : ''}`} onClick={() => toggleRow(p.id)}>
                   <td className="px-4 py-4 text-center font-bold text-gray-600 group-hover:text-gray-400">{i + 1}</td>
@@ -208,7 +208,16 @@ const PFMChart = ({ products, onDeleteProduct }: { products: Product[], onDelete
                   </tr>
                 )}
               </React.Fragment>
-            ))}
+            )) : (
+              <tr>
+                <td colSpan={11} className="py-20 text-center">
+                   <div className="flex flex-col items-center gap-4 opacity-20">
+                      <BarChart3 size={48} />
+                      <span className="text-sm font-black uppercase tracking-widest">No Content Found</span>
+                   </div>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -256,7 +265,6 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
       console.error("OCR API Full Error Object:", e);
       let displayError = "An unexpected error occurred.";
       
-      // Extract specific error message
       if (e.message) {
         displayError = e.message;
       } else if (typeof e === 'string') {
@@ -265,7 +273,6 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
         displayError = JSON.stringify(e);
       }
 
-      // Friendly mapping for common errors
       if (displayError.includes("429")) {
         displayError = "Quota Exhausted (429): คุณใช้งานเกินโควต้าฟรีของวันนี้แล้ว กรุณาลองใหม่ในอีก 60 วินาที หรือพรุ่งนี้";
       } else if (displayError.includes("API_KEY_MISSING")) {
@@ -316,7 +323,6 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
-          {/* Upload Section */}
           <div className="lg:col-span-5 space-y-8">
             <div onClick={() => !isUploading && fileInputRef.current?.click()} className={`aspect-[4/5] rounded-[2.5rem] border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all duration-300 overflow-hidden relative group ${imagePreview ? 'border-cyan-500/50 shadow-2xl shadow-cyan-500/10' : 'border-gray-800 hover:border-gray-700 bg-black/20'}`}>
               {imagePreview ? (
@@ -348,7 +354,6 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
             )}
           </div>
 
-          {/* Results Section */}
           <div className="lg:col-span-7 space-y-8">
             {!extractedData && !isUploading && (
               <div className="h-full flex flex-col justify-center gap-8 min-h-[500px]">
@@ -464,9 +469,34 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
-  const deleteProduct = (id: number) => setProducts(products.filter(p => p.id !== id));
-  const addProduct = (p: Product) => { setProducts([p, ...products]); setActiveTab('dashboard'); };
+  
+  // Initial state logic: Try to load from localStorage first
+  const [products, setProducts] = useState<Product[]>(() => {
+    const saved = localStorage.getItem('pfm_dashboard_products');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse saved products:", e);
+        return INITIAL_PRODUCTS;
+      }
+    }
+    return INITIAL_PRODUCTS;
+  });
+
+  // Persist products whenever they change
+  useEffect(() => {
+    localStorage.setItem('pfm_dashboard_products', JSON.stringify(products));
+  }, [products]);
+
+  const deleteProduct = (id: number) => {
+    setProducts(prev => prev.filter(p => p.id !== id));
+  };
+
+  const addProduct = (p: Product) => { 
+    setProducts(prev => [p, ...prev]); 
+    setActiveTab('dashboard'); 
+  };
 
   return (
     <div className="flex min-h-screen bg-[#0d0f12] text-slate-200">
