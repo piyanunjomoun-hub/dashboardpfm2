@@ -253,11 +253,27 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
       data.mainProduct = 'Julaherb';
       setExtractedData(data);
     } catch (e: any) { 
-      console.error("OCR Error:", e);
-      const errorStr = JSON.stringify(e).toLowerCase();
-      // If deployed, we need to know what specifically went wrong (API Key or something else)
-      let displayError = e.message || "Extraction failed. Please check your internet or API key.";
-      if (errorStr.includes('429')) displayError = "Server busy (Quota limit). Please wait 60s and try again.";
+      console.error("OCR API Full Error Object:", e);
+      let displayError = "An unexpected error occurred.";
+      
+      // Extract specific error message
+      if (e.message) {
+        displayError = e.message;
+      } else if (typeof e === 'string') {
+        displayError = e;
+      } else {
+        displayError = JSON.stringify(e);
+      }
+
+      // Friendly mapping for common errors
+      if (displayError.includes("429")) {
+        displayError = "Quota Exhausted (429): คุณใช้งานเกินโควต้าฟรีของวันนี้แล้ว กรุณาลองใหม่ในอีก 60 วินาที หรือพรุ่งนี้";
+      } else if (displayError.includes("API_KEY_MISSING")) {
+        displayError = "Missing API Key: ไม่พบ API Key ใน Environment Variable ของ GitHub กรุณาตั้งค่าความลับ (Secrets)";
+      } else if (displayError.includes("API_KEY_INVALID")) {
+        displayError = "Invalid API Key: คีย์ที่คุณใช้อยู่ไม่ถูกต้องหรือถูกระงับ";
+      }
+
       setErrorMessage(displayError);
     } finally { 
       setIsUploading(false); 
@@ -289,17 +305,18 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
         </div>
 
         {errorMessage && (
-          <div className="mb-10 p-6 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-5 text-red-400 animate-pulse">
-            <AlertCircle size={32} />
+          <div className="mb-10 p-6 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-5 text-red-400">
+            <AlertCircle size={32} className="shrink-0" />
             <div className="flex flex-col">
               <span className="text-sm font-black uppercase tracking-widest">Processing Error</span>
-              <span className="text-xs opacity-90 font-medium">{errorMessage}</span>
+              <span className="text-xs opacity-90 font-medium break-all">{errorMessage}</span>
+              <span className="text-[10px] mt-2 opacity-50 italic">* หากอยู่บน GitHub กรุณาตรวจสอบว่าได้ตั้งค่า API_KEY ใน Repository Secrets แล้วหรือไม่</span>
             </div>
           </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
-          {/* Upload Section (Wider Column) */}
+          {/* Upload Section */}
           <div className="lg:col-span-5 space-y-8">
             <div onClick={() => !isUploading && fileInputRef.current?.click()} className={`aspect-[4/5] rounded-[2.5rem] border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all duration-300 overflow-hidden relative group ${imagePreview ? 'border-cyan-500/50 shadow-2xl shadow-cyan-500/10' : 'border-gray-800 hover:border-gray-700 bg-black/20'}`}>
               {imagePreview ? (
@@ -331,7 +348,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
             )}
           </div>
 
-          {/* Results Section (Even Wider Column) */}
+          {/* Results Section */}
           <div className="lg:col-span-7 space-y-8">
             {!extractedData && !isUploading && (
               <div className="h-full flex flex-col justify-center gap-8 min-h-[500px]">
@@ -344,7 +361,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
                 </button>
                 <div className="bg-white/5 border border-white/5 p-10 rounded-[2.5rem] text-center border-dashed">
                   <p className="text-sm text-gray-500 font-bold uppercase tracking-widest leading-relaxed">
-                    Our AI models will dissect the screenshot to extract key performance layers. Verification will be required before publishing to the live dashboard.
+                    AI will automatically analyze your image. If it fails, please check your network connection or API quota status.
                   </p>
                 </div>
               </div>
@@ -356,8 +373,8 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
                   <Loader2 size={80} className="text-cyan-400 animate-spin mb-10" />
                   <div className="absolute inset-0 blur-3xl bg-cyan-500/30 rounded-full animate-pulse"></div>
                 </div>
-                <p className="text-cyan-400 font-black uppercase text-sm tracking-[0.5em] animate-pulse">Synchronizing performance data...</p>
-                <span className="text-[10px] text-gray-600 uppercase font-bold mt-4 tracking-[0.2em]">Contacting Gemini API Layer V3</span>
+                <p className="text-cyan-400 font-black uppercase text-sm tracking-[0.5em] animate-pulse">Communicating with AI Cluster...</p>
+                <span className="text-[10px] text-gray-600 uppercase font-bold mt-4 tracking-[0.2em]">Requesting data extraction from Gemini-3</span>
               </div>
             )}
             
@@ -366,7 +383,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
                 <div className="flex items-center justify-between text-cyan-400 border-b border-white/5 pb-8">
                   <div className="flex items-center gap-5">
                     <CheckCircle2 size={28} />
-                    <span className="text-lg font-black uppercase tracking-[0.3em]">Verification Hub</span>
+                    <span className="text-lg font-black uppercase tracking-[0.3em]">Data Verification</span>
                   </div>
                   <button onClick={() => setExtractedData(null)} className="text-gray-500 hover:text-white transition-colors p-3 hover:bg-white/5 rounded-full">
                     <X size={28}/>
@@ -384,7 +401,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
                   </div>
                   <div className="flex-1 space-y-6">
                     <div>
-                      <span className="text-[10px] font-black uppercase text-gray-500 block mb-2 tracking-widest">Target Content Headline</span>
+                      <span className="text-[10px] font-black uppercase text-gray-500 block mb-2 tracking-widest">Headline Label</span>
                       <input 
                         className="bg-black/30 border border-gray-800 rounded-2xl w-full text-white text-base font-black p-5 focus:border-cyan-500 outline-none transition-all shadow-inner focus:ring-4 focus:ring-cyan-500/10" 
                         value={extractedData.name || ''} 
@@ -393,7 +410,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
                     </div>
                     <div className="flex gap-4">
                       <button onClick={() => customThumbInputRef.current?.click()} className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 py-5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] border border-gray-700 transition-all flex items-center justify-center gap-4">
-                        <ImageIcon size={20} /> Replace Media
+                        <ImageIcon size={20} /> Update Media
                       </button>
                       {customThumb && (
                         <button onClick={() => setCustomThumb(null)} className="px-6 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-2xl border border-red-500/20 transition-all">
@@ -420,11 +437,11 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
                     </div>
                   ))}
                   <div className="col-span-2">
-                    <span className="text-[10px] font-black text-cyan-600 block uppercase mb-3 tracking-widest">PFM Effectiveness</span>
+                    <span className="text-[10px] font-black text-cyan-600 block uppercase mb-3 tracking-widest">Effectiveness Score</span>
                     <input className="bg-cyan-500/10 border border-cyan-500/20 w-full rounded-2xl p-4 text-sm text-cyan-400 font-black text-center focus:border-cyan-400 outline-none shadow-inner" value={extractedData.pfm || ''} onChange={e => setExtractedData({...extractedData, pfm: e.target.value})} />
                   </div>
                   <div className="col-span-2">
-                    <span className="text-[10px] font-black text-emerald-600 block uppercase mb-3 tracking-widest">Main Product Category</span>
+                    <span className="text-[10px] font-black text-emerald-600 block uppercase mb-3 tracking-widest">Brand Line</span>
                     <select className="bg-emerald-500/10 border border-emerald-500/20 w-full rounded-2xl p-4 text-sm text-emerald-400 font-black outline-none focus:border-emerald-400 transition-all shadow-inner" value={extractedData.mainProduct} onChange={e => setExtractedData({...extractedData, mainProduct: e.target.value as any})}>
                       {['Julaherb', 'JDENT', 'Jarvit'].map(c => <option key={c} value={c} className="bg-[#1a1c20]">{c}</option>)}
                     </select>
@@ -432,8 +449,8 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
                 </div>
 
                 <div className="pt-6 flex gap-6">
-                  <button onClick={() => {setExtractedData(null); setCustomThumb(null);}} className="flex-1 py-7 text-xs font-black uppercase tracking-[0.3em] text-gray-500 border border-gray-800 rounded-[2.5rem] hover:text-white hover:bg-white/5 transition-all">Cancel Sync</button>
-                  <button onClick={confirmAdd} className="flex-[2] py-7 bg-cyan-500 text-black rounded-[2.5rem] font-black uppercase text-xs tracking-[0.4em] shadow-2xl shadow-cyan-500/30 hover:bg-cyan-400 transition-all">Publish Content Layer</button>
+                  <button onClick={() => {setExtractedData(null); setCustomThumb(null);}} className="flex-1 py-7 text-xs font-black uppercase tracking-[0.3em] text-gray-500 border border-gray-800 rounded-[2.5rem] hover:text-white hover:bg-white/5 transition-all">Cancel</button>
+                  <button onClick={confirmAdd} className="flex-[2] py-7 bg-cyan-500 text-black rounded-[2.5rem] font-black uppercase text-xs tracking-[0.4em] shadow-2xl shadow-cyan-500/30 hover:bg-cyan-400 transition-all">Confirm & Publish</button>
                 </div>
               </div>
             )}
