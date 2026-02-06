@@ -12,19 +12,25 @@ async function withRetry<T>(fn: (attempt: number) => Promise<T>, maxRetries = 2,
     } catch (error: any) {
       lastError = error;
       const errorString = JSON.stringify(error).toLowerCase();
+      
+      // Improved rate limit detection
       const isRateLimit = 
         error?.status === 429 || 
         errorString.includes('429') || 
         errorString.includes('resource_exhausted') ||
         errorString.includes('quota');
         
-      if (!isRateLimit || i === maxRetries) {
-        throw error;
+      if (isRateLimit) {
+        if (i === maxRetries) {
+          throw new Error("โควต้า API เต็ม (Quota Exceeded): กรุณารอสักครู่ (ประมาณ 1 นาที) หรือเปลี่ยนไปใช้ API Key อื่น");
+        }
+        const delay = initialDelay * Math.pow(2, i);
+        console.warn(`Quota reached. Retry ${i + 1}/${maxRetries} in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
       }
       
-      const delay = initialDelay * Math.pow(2, i);
-      console.warn(`Quota reached. Retry ${i + 1}/${maxRetries} in ${delay}ms...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      throw error;
     }
   }
   throw lastError;
@@ -34,17 +40,17 @@ async function withRetry<T>(fn: (attempt: number) => Promise<T>, maxRetries = 2,
  * Extracts TikTok shop analytics from an image using Gemini.
  */
 export const extractProductFromImage = async (base64Image: string) => {
-  // Extract clean base64 and mime type
   const mimeTypeMatch = base64Image.match(/^data:(image\/[a-z]+);base64,/);
   const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : "image/jpeg";
   const base64Data = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
 
   return withRetry(async () => {
-    // CRITICAL: Always initialize a new GoogleGenAI instance right before the call
+    // CRITICAL: Always initialize a new GoogleGenAI instance per request
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
+    // Using gemini-3-flash-preview for better quota availability and speed
     const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview", 
+      model: "gemini-3-flash-preview", 
       contents: {
         parts: [
           {
@@ -104,7 +110,6 @@ export const extractProductFromImage = async (base64Image: string) => {
     let result = response.text;
     if (!result) throw new Error("AI could not extract text. Try a clearer image.");
     
-    // Clean potential markdown blocks
     result = result.replace(/```json/g, "").replace(/```/g, "").trim();
     
     try {
