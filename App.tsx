@@ -32,7 +32,8 @@ import {
   Globe,
   Copy,
   Link,
-  LogIn
+  Database,
+  ShieldCheck
 } from 'lucide-react';
 import { 
   PRODUCTS as INITIAL_PRODUCTS, 
@@ -41,34 +42,41 @@ import {
 import { extractProductFromImage } from './geminiService';
 import { Product } from './types';
 
-// --- Cloud Sync Helper (Using kvdb.io - Very stable for simple KV storage) ---
-// We use a public bucket. In production, you'd use a private one.
-const BUCKET_ID = 'pfm_dashboard_v1'; 
-const SYNC_API_BASE = `https://kvdb.io/${BUCKET_ID}`;
+// --- Google Sheets Integration ---
+const GOOGLE_SHEET_APP_URL = 'https://script.google.com/macros/s/AKfycbyhOTmeDg40xgOSo_V3ndtzx0FcLfjl_uZrsAu4dPEzZuVE1LRNlr1FkDLK30bvZZdTlQ/exec'; 
 
-const saveToCloud = async (workspaceId: string, data: Product[]) => {
+const saveToGoogleSheet = async (data: Product[]) => {
+  if (!GOOGLE_SHEET_APP_URL || GOOGLE_SHEET_APP_URL.includes('YOUR_')) return false;
   try {
-    const res = await fetch(`${SYNC_API_BASE}/${workspaceId}`, {
-      method: 'POST', // kvdb uses POST to write
+    // We use a POST request to update the sheet. 
+    // Note: Apps Script Web Apps often require 'no-cors' or specific handling for redirects.
+    // However, fetch with POST to Google Script usually works best as a simple request if no response is needed immediately.
+    await fetch(GOOGLE_SHEET_APP_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(data)
     });
-    return res.ok;
+    return true; 
   } catch (e) {
-    console.error("Cloud Save Error:", e);
+    console.error("Sheet Save Error:", e);
     return false;
   }
 };
 
-const loadFromCloud = async (workspaceId: string) => {
+const loadFromGoogleSheet = async () => {
+  if (!GOOGLE_SHEET_APP_URL || GOOGLE_SHEET_APP_URL.includes('YOUR_')) return null;
   try {
-    const res = await fetch(`${SYNC_API_BASE}/${workspaceId}`);
+    const res = await fetch(GOOGLE_SHEET_APP_URL);
     if (res.ok) {
-      const text = await res.text();
-      return text ? JSON.parse(text) : null;
+      const data = await res.json();
+      return Array.isArray(data) ? data : null;
     }
     return null;
   } catch (e) {
-    console.error("Cloud Load Error:", e);
+    console.error("Sheet Load Error:", e);
     return null;
   }
 };
@@ -89,19 +97,20 @@ const Sidebar = ({ activeTab, onTabChange }: { activeTab: string, onTabChange: (
   </div>
 );
 
-const TopBar = ({ title, syncStatus }: { title: string, syncStatus: 'idle' | 'syncing' | 'synced' | 'error' }) => (
+const TopBar = ({ title, syncStatus }: { title: string, syncStatus: 'idle' | 'syncing' | 'synced' | 'error' | 'no-config' }) => (
   <div className="h-14 bg-[#0d0f12] border-b border-gray-800 flex items-center justify-between px-6 sticky top-0 z-10 ml-16 backdrop-blur-md">
     <div className="flex items-center gap-4">
-      <span className="text-gray-400 text-sm font-medium tracking-wide">{title}</span>
+      <span className="text-gray-400 text-sm font-medium tracking-wide uppercase">{title}</span>
       <div className="flex items-center gap-2 bg-gray-800/50 px-3 py-1 rounded-full text-[10px] font-bold text-green-400 border border-green-500/10">
-        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-        <span>LIVE SYSTEM</span>
+        <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+        <span>CONNECTED TO GLOBAL CLOUD</span>
       </div>
     </div>
     <div className="flex items-center gap-3">
-      {syncStatus === 'syncing' && <div className="flex items-center gap-2 text-[10px] font-black text-cyan-400 animate-pulse"><RefreshCw size={12} className="animate-spin" /> SYNCING...</div>}
-      {syncStatus === 'synced' && <div className="flex items-center gap-2 text-[10px] font-black text-emerald-400"><CheckCircle2 size={12} /> CLOUD SECURED</div>}
-      {syncStatus === 'error' && <div className="flex items-center gap-2 text-[10px] font-black text-red-400"><AlertCircle size={12} /> SYNC FAILED</div>}
+      {syncStatus === 'syncing' && <div className="flex items-center gap-2 text-[10px] font-black text-cyan-400 animate-pulse"><RefreshCw size={12} className="animate-spin" /> WRITING TO GOOGLE SHEET...</div>}
+      {syncStatus === 'synced' && <div className="flex items-center gap-2 text-[10px] font-black text-emerald-400"><ShieldCheck size={12} /> GLOBAL DATABASE SECURED</div>}
+      {syncStatus === 'error' && <div className="flex items-center gap-2 text-[10px] font-black text-red-400"><AlertCircle size={12} /> SHEET SYNC ERROR</div>}
+      {syncStatus === 'no-config' && <div className="flex items-center gap-2 text-[10px] font-black text-orange-400"><Settings size={12} /> GOOGLE SHEET NOT CONFIGURED</div>}
     </div>
   </div>
 );
@@ -117,7 +126,7 @@ const MainKPICard = () => {
   return (
     <div className="rounded-2xl p-8 relative overflow-hidden flex flex-col gap-8 h-full" style={{ background: 'linear-gradient(-40deg, #f4259f, #0f7ce2)', boxShadow: '0 0 30px 2px rgba(0, 252, 255, 0.15)' }}>
       <div className="flex flex-col items-center gap-2 mt-4 relative z-10">
-        <span className="text-white/70 text-[10px] font-black uppercase tracking-[0.3em]">Total Dashboard View</span>
+        <span className="text-white/70 text-[10px] font-black uppercase tracking-[0.3em]">Global Performance View</span>
         <h1 className="text-8xl font-black tracking-tighter text-white drop-shadow-2xl tabular-nums">{INITIAL_KPI_STATS.totalViews}</h1>
       </div>
       <div className="w-full h-px bg-white/10 mt-4 relative z-10"></div>
@@ -133,65 +142,37 @@ const MainKPICard = () => {
   );
 };
 
-const WorkspaceManager = ({ blobId, onConnect }: { blobId: string | null, onConnect: (id: string) => void }) => {
-  const [inputValue, setInputValue] = useState('');
-  const [isJoinMode, setIsJoinMode] = useState(false);
-
-  return (
-    <div className="bg-[#1a1c20] rounded-[2rem] border border-gray-800 p-8 flex flex-col gap-6 shadow-2xl relative overflow-hidden group h-full">
-      <div className="flex items-center gap-4 text-cyan-400 border-b border-gray-800 pb-4">
-        <Globe size={24} />
-        <span className="font-black uppercase tracking-[0.2em] text-sm">Cloud Workspace</span>
-      </div>
-      
-      {!blobId && !isJoinMode ? (
-        <div className="flex flex-col gap-4 py-4">
-          <p className="text-xs text-gray-500 font-medium leading-relaxed">ตั้งชื่อ "Workspace Name" เพื่อแชร์ข้อมูลร่วมกับเครื่องอื่น (เช่น Julaherb-Team-A)</p>
-          <button onClick={() => setIsJoinMode(true)} className="w-full py-4 bg-cyan-500 text-black rounded-xl font-black text-xs uppercase tracking-widest hover:bg-cyan-400 transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20">
-             <LogIn size={16} /> Enter Workspace Name
-          </button>
-        </div>
-      ) : isJoinMode ? (
-        <div className="flex flex-col gap-4 py-4 animate-in fade-in duration-300">
-           <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Create or Join Name:</span>
-           <input 
-            placeholder="e.g. julaherb-project-01" 
-            className="bg-black/40 border border-gray-800 rounded-xl p-4 text-white font-black text-xs outline-none focus:border-cyan-500 transition-all uppercase"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value.replace(/\s+/g, '-'))}
-           />
-           <div className="flex gap-2">
-            <button onClick={() => setIsJoinMode(false)} className="flex-1 py-4 text-gray-500 font-black text-xs uppercase tracking-widest border border-gray-800 rounded-xl hover:bg-white/5">Cancel</button>
-            <button 
-              disabled={inputValue.length < 3}
-              onClick={() => { onConnect(inputValue); setIsJoinMode(false); }} 
-              className="flex-[2] py-4 bg-cyan-500 text-black rounded-xl font-black text-xs uppercase tracking-widest hover:bg-cyan-400 transition-all disabled:opacity-20"
-            >
-              Sync Now
-            </button>
-           </div>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-5 py-2 animate-in fade-in duration-300">
-          <div className="flex flex-col gap-1">
-            <span className="text-[9px] uppercase text-gray-600 font-black tracking-widest">Connected Workspace</span>
-            <div className="flex items-center gap-2 bg-black/40 border border-gray-800 rounded-xl p-4">
-              <span className="flex-1 text-xs text-cyan-400 font-black truncate uppercase">{blobId}</span>
-              <button 
-                onClick={() => { navigator.clipboard.writeText(blobId || ''); alert('คัดลอกชื่อห้องแล้ว!'); }} 
-                className="p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-all"
-              >
-                <Copy size={16}/>
-              </button>
-            </div>
+const DatabaseStatusCard = ({ isConfigured }: { isConfigured: boolean }) => (
+  <div className="bg-[#1a1c20] rounded-[2rem] border border-gray-800 p-8 flex flex-col gap-6 shadow-2xl relative overflow-hidden group h-full">
+    <div className="flex items-center gap-4 text-cyan-400 border-b border-gray-800 pb-4">
+      <Database size={24} />
+      <span className="font-black uppercase tracking-[0.2em] text-sm">Master Database Status</span>
+    </div>
+    
+    <div className="flex flex-col gap-5 py-4 flex-1 justify-center">
+      {isConfigured ? (
+        <>
+          <div className="flex items-center gap-4 bg-emerald-500/10 border border-emerald-500/20 p-5 rounded-2xl animate-in zoom-in-95">
+             <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center text-black shrink-0"><ShieldCheck size={28} /></div>
+             <div className="flex flex-col">
+               <span className="text-emerald-400 font-black text-xs uppercase tracking-widest">Global Sync Active</span>
+               <span className="text-gray-500 text-[10px] font-medium uppercase mt-0.5">Connected to Google Sheet</span>
+             </div>
           </div>
-          <p className="text-[9px] text-gray-600 font-bold uppercase leading-relaxed text-center">พิมพ์ชื่อห้องนี้ในเครื่องอื่น <br/> เพื่อแชร์ข้อมูลชุดเดียวกัน</p>
-          <button onClick={() => { if(confirm('ต้องการตัดการเชื่อมต่อ Cloud? ข้อมูลจะยังคงอยู่แค่ในเบราว์เซอร์นี้')) onConnect(''); }} className="text-[10px] text-red-500/50 uppercase font-black tracking-widest hover:text-red-500 transition-colors mt-2">Disconnect Cloud</button>
+          <p className="text-[10px] text-gray-600 font-bold uppercase leading-relaxed text-center px-4">
+            ข้อมูลชุดนี้ถูกแชร์ให้กับทุกคนที่เข้าใช้งานผ่าน Google Sheets ส่วนกลางของคุณ
+          </p>
+        </>
+      ) : (
+        <div className="flex flex-col items-center gap-4 text-center py-6">
+           <AlertCircle size={48} className="text-orange-500/40" />
+           <p className="text-xs text-gray-500 font-bold leading-relaxed uppercase tracking-tighter">กรุณาตั้งค่า Google Sheets Web App URL ในโค้ดเพื่อให้ทุกคนใช้งานฐานข้อมูลร่วมกันได้</p>
+           <a href="https://docs.google.com/spreadsheets/u/0/" target="_blank" className="text-[10px] text-cyan-500 font-black uppercase tracking-widest hover:underline">Open Google Sheets</a>
         </div>
       )}
     </div>
-  );
-};
+  </div>
+);
 
 const PFMChart = ({ products, onDeleteProduct }: { products: Product[], onDeleteProduct: (id: number) => void }) => {
   const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
@@ -217,7 +198,7 @@ const PFMChart = ({ products, onDeleteProduct }: { products: Product[], onDelete
       <div className="p-6 flex flex-wrap justify-between items-center gap-4 border-b border-gray-800 bg-[#16181b]/50">
         <div className="flex items-center gap-3">
           <BarChart3 size={18} className="text-cyan-400" />
-          <h3 className="text-base font-black text-gray-100 uppercase tracking-widest">PFM Chart</h3>
+          <h3 className="text-base font-black text-gray-100 uppercase tracking-widest">PFM Master Chart</h3>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -299,7 +280,7 @@ const PFMChart = ({ products, onDeleteProduct }: { products: Product[], onDelete
                           </div>
                         )}
                         <button 
-                          onClick={(e) => { e.stopPropagation(); if(confirm('ต้องการลบข้อมูลนี้ใช่หรือไม่?')) onDeleteProduct(p.id); }} 
+                          onClick={(e) => { e.stopPropagation(); if(confirm('ต้องการลบข้อมูลชุดนี้จาก Global Database ใช่หรือไม่?')) onDeleteProduct(p.id); }} 
                           className="ml-4 p-2 text-gray-600 hover:text-red-500 transition-colors bg-red-500/5 rounded-lg border border-red-500/10"
                           title="Delete content"
                         >
@@ -315,7 +296,7 @@ const PFMChart = ({ products, onDeleteProduct }: { products: Product[], onDelete
                 <td colSpan={11} className="py-20 text-center">
                    <div className="flex flex-col items-center gap-4 opacity-20">
                       <BarChart3 size={48} />
-                      <span className="text-sm font-black uppercase tracking-widest">No Content Found</span>
+                      <span className="text-sm font-black uppercase tracking-widest">Global Data Stream Empty</span>
                    </div>
                 </td>
               </tr>
@@ -364,15 +345,8 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
       data.mainProduct = 'Julaherb';
       setExtractedData(data);
     } catch (e: any) { 
-      console.error("OCR API Full Error Object:", e);
-      let displayError = e.message || "เกิดข้อผิดพลาดในการประมวลผลภาพ";
-      
-      if (displayError.includes("429")) {
-        displayError = "Quota Exhausted (429): คุณใช้งานเกินโควต้าฟรีของวันนี้แล้ว กรุณาลองใหม่ในอีก 60 วินาที หรือพรุ่งนี้";
-      } else if (displayError.includes("API_KEY_MISSING")) {
-        displayError = "Missing API Key: ไม่พบ API Key ในระบบกรุณาตั้งค่า Secrets ใน GitHub";
-      }
-
+      console.error("OCR API Error:", e);
+      let displayError = e.message || "Error processing image";
       setErrorMessage(displayError);
     } finally { 
       setIsUploading(false); 
@@ -390,7 +364,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
       };
       onAddProduct(p);
       setExtractedData(null); setImagePreview(null); setCustomThumb(null); setErrorMessage(null);
-      alert("บันทึกข้อมูลเรียบร้อยแล้ว");
+      alert("บันทึกลง Global Sheet เรียบร้อยแล้ว");
     }
   };
 
@@ -399,17 +373,16 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
       <div className="bg-[#1a1c20]/40 rounded-3xl border border-gray-800 p-12 shadow-2xl backdrop-blur-xl">
         <div className="flex flex-col items-center mb-12">
           <div className="w-24 h-24 bg-cyan-500/10 rounded-2xl flex items-center justify-center text-cyan-400 mb-6 border border-cyan-500/20 shadow-inner"><CloudUpload size={48} /></div>
-          <h2 className="text-4xl font-black text-white uppercase tracking-[0.2em]">Performance Data OCR</h2>
-          <p className="text-gray-500 text-base mt-4 font-medium">Upload or <span className="text-cyan-400 font-bold underline">Paste (Ctrl+V)</span> screenshot to begin mapping</p>
+          <h2 className="text-4xl font-black text-white uppercase tracking-[0.2em]">Data Feed Analytics</h2>
+          <p className="text-gray-500 text-base mt-4 font-medium">Extract data and sync to <span className="text-emerald-400 font-bold uppercase underline">Google Sheets Master</span></p>
         </div>
 
         {errorMessage && (
           <div className="mb-10 p-6 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-5 text-red-400">
             <AlertCircle size={32} className="shrink-0" />
             <div className="flex flex-col">
-              <span className="text-sm font-black uppercase tracking-widest">Processing Error</span>
+              <span className="text-sm font-black uppercase tracking-widest">OCR Extraction Failure</span>
               <span className="text-xs opacity-90 font-medium break-all">{errorMessage}</span>
-              <span className="text-[10px] mt-2 opacity-50 italic">* หากแกะข้อมูลไม่สำเร็จ กรุณาใช้ภาพ Screenshot ที่ชัดเจนและเห็นตารางข้อมูลครบถ้วน</span>
             </div>
           </div>
         )}
@@ -431,19 +404,11 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
                   <div className="p-8 bg-gray-900/50 rounded-full border border-gray-800">
                     <ClipboardPaste className="text-gray-400" size={64} />
                   </div>
-                  <span className="text-gray-500 font-bold text-sm uppercase tracking-[0.4em]">Select or Paste Screenshot</span>
+                  <span className="text-gray-500 font-bold text-sm uppercase tracking-[0.4em]">Screenshot Dropzone</span>
                 </div>
               )}
               <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onload=ev=>setImagePreview(ev.target?.result as string); r.readAsDataURL(f); }}} />
             </div>
-            {imagePreview && !isUploading && (
-              <button 
-                onClick={() => {setImagePreview(null); setExtractedData(null); setCustomThumb(null); setErrorMessage(null);}} 
-                className="w-full py-5 text-red-400 text-xs font-black uppercase tracking-[0.2em] hover:bg-red-500/10 rounded-2xl border border-red-500/20 transition-all shadow-lg"
-              >
-                Discard Current Media
-              </button>
-            )}
           </div>
 
           <div className="lg:col-span-7 space-y-8">
@@ -454,24 +419,15 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
                   onClick={processImage} 
                   className="w-full bg-cyan-500 hover:bg-cyan-400 text-black py-10 rounded-[2.5rem] font-black uppercase tracking-[0.4em] text-base transition-all shadow-[0_20px_50px_rgba(34,211,238,0.3)] flex items-center justify-center gap-5 disabled:opacity-20 disabled:grayscale"
                 >
-                  <Plus size={32} /> EXECUTE AI ANALYTICS
+                  <Plus size={32} /> START AI PIPELINE
                 </button>
-                <div className="bg-white/5 border border-white/5 p-10 rounded-[2.5rem] text-center border-dashed">
-                  <p className="text-sm text-gray-500 font-bold uppercase tracking-widest leading-relaxed">
-                    AI will automatically analyze your image. If it fails, please check your network connection or image quality.
-                  </p>
-                </div>
               </div>
             )}
             
             {isUploading && (
               <div className="h-full flex flex-col items-center justify-center py-24 bg-black/20 rounded-[2.5rem] border border-white/5 shadow-inner">
-                <div className="relative">
-                  <Loader2 size={80} className="text-cyan-400 animate-spin mb-10" />
-                  <div className="absolute inset-0 blur-3xl bg-cyan-500/30 rounded-full animate-pulse"></div>
-                </div>
-                <p className="text-cyan-400 font-black uppercase text-sm tracking-[0.5em] animate-pulse">Communicating with AI Cluster...</p>
-                <span className="text-[10px] text-gray-600 uppercase font-bold mt-4 tracking-[0.2em]">Requesting data extraction from Gemini-3</span>
+                <Loader2 size={80} className="text-cyan-400 animate-spin mb-10" />
+                <p className="text-cyan-400 font-black uppercase text-sm tracking-[0.5em] animate-pulse">Scanning Data Structures...</p>
               </div>
             )}
             
@@ -480,84 +436,50 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
                 <div className="flex items-center justify-between text-cyan-400 border-b border-white/5 pb-8">
                   <div className="flex items-center gap-5">
                     <CheckCircle2 size={28} />
-                    <span className="text-lg font-black uppercase tracking-[0.3em]">Data Verification</span>
+                    <span className="text-lg font-black uppercase tracking-[0.3em]">Validation Required</span>
                   </div>
-                  <button onClick={() => setExtractedData(null)} className="text-gray-500 hover:text-white transition-colors p-3 hover:bg-white/5 rounded-full">
-                    <X size={28}/>
-                  </button>
                 </div>
                 
-                <div className="flex gap-10 items-start">
-                  <div className="relative group shrink-0">
-                    <div className="w-36 h-48 bg-gray-900 rounded-3xl overflow-hidden border border-cyan-500/30 relative shadow-2xl transition-all group-hover:border-cyan-400 group-hover:scale-[1.02]">
-                      <img src={customThumb || imagePreview || ''} className="w-full h-full object-cover" alt="" />
-                      <div onClick={() => customThumbInputRef.current?.click()} className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity backdrop-blur-sm">
-                        <Camera size={32} className="text-white"/>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex-1 space-y-6">
-                    <div>
-                      <span className="text-[10px] font-black uppercase text-gray-500 block mb-2 tracking-widest">Headline Label</span>
-                      <input 
-                        className="bg-black/30 border border-gray-800 rounded-2xl w-full text-white text-base font-black p-5 focus:border-cyan-500 outline-none transition-all shadow-inner focus:ring-4 focus:ring-cyan-500/10" 
-                        value={extractedData.name || ''} 
-                        onChange={e => setExtractedData({...extractedData, name: e.target.value})} 
-                      />
-                    </div>
-                    <div className="flex gap-4">
-                      <button onClick={() => customThumbInputRef.current?.click()} className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 py-5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] border border-gray-700 transition-all flex items-center justify-center gap-4">
-                        <ImageIcon size={20} /> Update Media
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
                 <div className="grid grid-cols-4 gap-6 bg-black/20 p-8 rounded-[2.5rem] border border-white/5">
+                  <div className="col-span-4">
+                    <span className="text-[10px] font-black uppercase text-gray-500 block mb-2 tracking-widest">Headline Label</span>
+                    <input 
+                      className="bg-black/30 border border-gray-800 rounded-2xl w-full text-white text-base font-black p-5 focus:border-cyan-500 outline-none transition-all shadow-inner" 
+                      value={extractedData.name || ''} 
+                      onChange={e => setExtractedData({...extractedData, name: e.target.value})} 
+                    />
+                  </div>
                   {[
                     { l: 'DU', k: 'du' }, { l: 'AVG.W', k: 'avgW' }, { l: 'RE', k: 're' }, { l: 'VW', k: 'vw' },
-                    { l: 'LK', k: 'lk' }, { l: 'BM', k: 'bm' }, { l: 'CM', k: 'cm' }, { l: 'SH', k: 'sh' },
-                    { l: 'CPM', k: 'cpm' }, { l: 'CPE', k: 'cpe' }
+                    { l: 'LK', k: 'lk' }, { l: 'BM', k: 'bm' }, { l: 'CM', k: 'cm' }, { l: 'SH', k: 'sh' }
                   ].map(f => (
                     <div key={f.k}>
                       <span className="text-[10px] font-black text-gray-600 block uppercase mb-3 tracking-tighter">{f.l}</span>
                       <input 
-                        className="bg-gray-900 border border-gray-800 w-full rounded-2xl p-4 text-xs text-white font-black text-center focus:border-cyan-500 outline-none transition-all shadow-inner" 
+                        className="bg-gray-900 border border-gray-800 w-full rounded-2xl p-4 text-xs text-white font-black text-center focus:border-cyan-500 outline-none transition-all" 
                         value={(extractedData as any)[f.k] || ''} 
                         onChange={e => setExtractedData({...extractedData, [f.k]: e.target.value})} 
                       />
                     </div>
                   ))}
-                  <div className="col-span-2">
-                    <span className="text-[10px] font-black text-cyan-600 block uppercase mb-3 tracking-widest">Effectiveness Score</span>
-                    <input className="bg-cyan-500/10 border border-cyan-500/20 w-full rounded-2xl p-4 text-sm text-cyan-400 font-black text-center focus:border-cyan-400 outline-none shadow-inner" value={extractedData.pfm || ''} onChange={e => setExtractedData({...extractedData, pfm: e.target.value})} />
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-[10px] font-black text-emerald-600 block uppercase mb-3 tracking-widest">Brand Line</span>
-                    <select className="bg-emerald-500/10 border border-emerald-500/20 w-full rounded-2xl p-4 text-sm text-emerald-400 font-black outline-none focus:border-emerald-400 transition-all shadow-inner" value={extractedData.mainProduct} onChange={e => setExtractedData({...extractedData, mainProduct: e.target.value as any})}>
-                      {['Julaherb', 'JDENT', 'Jarvit'].map(c => <option key={c} value={c} className="bg-[#1a1c20]">{c}</option>)}
-                    </select>
-                  </div>
                 </div>
 
                 <div className="pt-6 flex gap-6">
                   <button onClick={() => {setExtractedData(null); setCustomThumb(null);}} className="flex-1 py-7 text-xs font-black uppercase tracking-[0.3em] text-gray-500 border border-gray-800 rounded-[2.5rem] hover:text-white hover:bg-white/5 transition-all">Cancel</button>
-                  <button onClick={confirmAdd} className="flex-[2] py-7 bg-cyan-500 text-black rounded-[2.5rem] font-black uppercase text-xs tracking-[0.4em] shadow-2xl shadow-cyan-500/30 hover:bg-cyan-400 transition-all">Confirm & Publish</button>
+                  <button onClick={confirmAdd} className="flex-[2] py-7 bg-cyan-500 text-black rounded-[2.5rem] font-black uppercase text-xs tracking-[0.4em] shadow-2xl shadow-cyan-500/30 hover:bg-cyan-400 transition-all">Commit to Master Sheet</button>
                 </div>
               </div>
             )}
           </div>
         </div>
       </div>
-      <input type="file" ref={customThumbInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onload=ev=>setCustomThumb(ev.target?.result as string); r.readAsDataURL(f); }}} />
     </div>
   );
 };
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
-  const [blobId, setBlobId] = useState<string | null>(localStorage.getItem('pfm_cloud_blob_id'));
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error' | 'no-config'>('idle');
   
   const [products, setProducts] = useState<Product[]>(() => {
     const saved = localStorage.getItem('pfm_dashboard_products');
@@ -567,60 +489,38 @@ const App: React.FC = () => {
     return INITIAL_PRODUCTS;
   });
 
-  // Load Cloud Data on Start or Connect
-  useEffect(() => {
-    if (blobId) {
-      setSyncStatus('syncing');
-      loadFromCloud(blobId).then(data => {
-        if (data && Array.isArray(data)) {
-          setProducts(data);
-          setSyncStatus('synced');
-        } else {
-          // If no data in cloud yet, we don't overwrite local, but indicate error if fetching failed
-          setSyncStatus('idle');
-        }
-      });
-    }
-  }, [blobId]);
+  const isConfigured = GOOGLE_SHEET_APP_URL.startsWith('http');
 
-  // Sync to Cloud on Change
+  // Initial Sync from Google Sheet on Mount
   useEffect(() => {
-    localStorage.setItem('pfm_dashboard_products', JSON.stringify(products));
-    
-    if (blobId) {
-      setSyncStatus('syncing');
-      const timer = setTimeout(() => {
-        saveToCloud(blobId, products).then(success => {
-          setSyncStatus(success ? 'synced' : 'error');
-        });
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [products, blobId]);
-
-  const handleConnectWorkspace = async (id: string) => {
-    if (!id) {
-      setBlobId(null);
-      localStorage.removeItem('pfm_cloud_blob_id');
+    if (!isConfigured) {
+      setSyncStatus('no-config');
       return;
     }
+    setSyncStatus('syncing');
+    loadFromGoogleSheet().then(data => {
+      if (data && Array.isArray(data)) {
+        setProducts(data);
+        setSyncStatus('synced');
+      } else {
+        setSyncStatus('idle');
+      }
+    });
+  }, [isConfigured]);
+
+  // Sync to Google Sheet on local changes (Debounced)
+  useEffect(() => {
+    if (!isConfigured) return;
+    localStorage.setItem('pfm_dashboard_products', JSON.stringify(products));
     
     setSyncStatus('syncing');
-    const cloudData = await loadFromCloud(id);
-    setBlobId(id);
-    localStorage.setItem('pfm_cloud_blob_id', id);
-    
-    if (cloudData && Array.isArray(cloudData)) {
-      setProducts(cloudData);
-      setSyncStatus('synced');
-      alert(`เชื่อมต่อห้อง "${id.toUpperCase()}" สำเร็จ! ข้อมูลถูกดึงลงมาแล้ว`);
-    } else {
-      // New workspace - upload current local data to it
-      await saveToCloud(id, products);
-      setSyncStatus('synced');
-      alert(`สร้างห้องใหม่ชื่อ "${id.toUpperCase()}" สำเร็จ! ข้อมูลปัจจุบันถูกอัปโหลดขึ้น Cloud แล้ว`);
-    }
-  };
+    const timer = setTimeout(() => {
+      saveToGoogleSheet(products).then(success => {
+        setSyncStatus(success ? 'synced' : 'error');
+      });
+    }, 3000); // 3s debounce to prevent rate limit on Google Sheets
+    return () => clearTimeout(timer);
+  }, [products, isConfigured]);
 
   const deleteProduct = (id: number) => {
     setProducts(prev => prev.filter(p => p.id !== id));
@@ -636,7 +536,7 @@ const App: React.FC = () => {
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
       <div className="flex-1 flex flex-col">
         <TopBar 
-          title={activeTab === 'dashboard' ? 'Live Analytics Center' : 'Content Media Pipeline'} 
+          title={activeTab === 'dashboard' ? 'Global Command Center' : 'Shared Data Ingestion'} 
           syncStatus={syncStatus}
         />
         <main className="ml-16 p-8 flex-1 overflow-y-auto">
@@ -645,10 +545,7 @@ const App: React.FC = () => {
               <>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                   <div className="lg:col-span-2 shadow-2xl"><MainKPICard /></div>
-                  <WorkspaceManager 
-                    blobId={blobId} 
-                    onConnect={handleConnectWorkspace} 
-                  />
+                  <DatabaseStatusCard isConfigured={isConfigured} />
                 </div>
                 <PFMChart products={products} onDeleteProduct={deleteProduct} />
               </>
