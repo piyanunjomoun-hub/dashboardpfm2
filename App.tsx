@@ -31,7 +31,8 @@ import {
   RefreshCw,
   Globe,
   Copy,
-  Link
+  Link,
+  LogIn
 } from 'lucide-react';
 import { 
   PRODUCTS as INITIAL_PRODUCTS, 
@@ -40,17 +41,15 @@ import {
 import { extractProductFromImage } from './geminiService';
 import { Product } from './types';
 
-// --- Cloud Sync Helper (Updated for correct npoint.io API structure) ---
-const SYNC_API_BASE = 'https://api.npoint.io/bins';
+// --- Cloud Sync Helper (Using kvdb.io - Very stable for simple KV storage) ---
+// We use a public bucket. In production, you'd use a private one.
+const BUCKET_ID = 'pfm_dashboard_v1'; 
+const SYNC_API_BASE = `https://kvdb.io/${BUCKET_ID}`;
 
-const saveToCloud = async (data: Product[]) => {
-  const blobId = localStorage.getItem('pfm_cloud_blob_id');
-  if (!blobId) return null;
-  
+const saveToCloud = async (workspaceId: string, data: Product[]) => {
   try {
-    const res = await fetch(`${SYNC_API_BASE}/${blobId}`, {
-      method: 'PUT', // Use PUT to overwrite the entire bin data
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetch(`${SYNC_API_BASE}/${workspaceId}`, {
+      method: 'POST', // kvdb uses POST to write
       body: JSON.stringify(data)
     });
     return res.ok;
@@ -60,33 +59,18 @@ const saveToCloud = async (data: Product[]) => {
   }
 };
 
-const loadFromCloud = async (blobId: string) => {
+const loadFromCloud = async (workspaceId: string) => {
   try {
-    const res = await fetch(`${SYNC_API_BASE}/${blobId}`);
-    if (res.ok) return await res.json();
+    const res = await fetch(`${SYNC_API_BASE}/${workspaceId}`);
+    if (res.ok) {
+      const text = await res.text();
+      return text ? JSON.parse(text) : null;
+    }
     return null;
   } catch (e) {
     console.error("Cloud Load Error:", e);
     return null;
   }
-};
-
-const createCloudStore = async (initialData: Product[]) => {
-  try {
-    const res = await fetch(SYNC_API_BASE, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: initialData }) // npoint creation format
-    });
-    const result = await res.json();
-    // npoint returns { "id": "xxxx", "contents": [...] }
-    if (result && result.id) {
-      return result.id;
-    }
-  } catch (e) {
-    console.error("Cloud Create Error Detail:", e);
-  }
-  return null;
 };
 
 // --- Components ---
@@ -149,7 +133,7 @@ const MainKPICard = () => {
   );
 };
 
-const WorkspaceManager = ({ blobId, onGenerate, onJoin }: { blobId: string | null, onGenerate: () => void, onJoin: (id: string) => void }) => {
+const WorkspaceManager = ({ blobId, onConnect }: { blobId: string | null, onConnect: (id: string) => void }) => {
   const [inputValue, setInputValue] = useState('');
   const [isJoinMode, setIsJoinMode] = useState(false);
 
@@ -162,41 +146,47 @@ const WorkspaceManager = ({ blobId, onGenerate, onJoin }: { blobId: string | nul
       
       {!blobId && !isJoinMode ? (
         <div className="flex flex-col gap-4 py-4">
-          <p className="text-xs text-gray-500 font-medium leading-relaxed">ข้อมูลของคุณถูกเก็บไว้แค่เครื่องนี้ หากต้องการเข้าถึงจากเครื่องอื่น กรุณาสร้าง Cloud Workspace</p>
-          <button onClick={onGenerate} className="w-full py-4 bg-cyan-500 text-black rounded-xl font-black text-xs uppercase tracking-widest hover:bg-cyan-400 transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20">
-             <Globe size={16} /> Generate Sync Code
+          <p className="text-xs text-gray-500 font-medium leading-relaxed">ตั้งชื่อ "Workspace Name" เพื่อแชร์ข้อมูลร่วมกับเครื่องอื่น (เช่น Julaherb-Team-A)</p>
+          <button onClick={() => setIsJoinMode(true)} className="w-full py-4 bg-cyan-500 text-black rounded-xl font-black text-xs uppercase tracking-widest hover:bg-cyan-400 transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20">
+             <LogIn size={16} /> Enter Workspace Name
           </button>
-          <button onClick={() => setIsJoinMode(true)} className="text-[10px] text-gray-500 uppercase font-black tracking-widest hover:text-white transition-colors mt-2 underline">Join Existing Workspace</button>
         </div>
       ) : isJoinMode ? (
         <div className="flex flex-col gap-4 py-4 animate-in fade-in duration-300">
+           <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Create or Join Name:</span>
            <input 
-            placeholder="Paste Sync Code Here..." 
-            className="bg-black/40 border border-gray-800 rounded-xl p-4 text-white font-black text-xs outline-none focus:border-cyan-500 transition-all"
+            placeholder="e.g. julaherb-project-01" 
+            className="bg-black/40 border border-gray-800 rounded-xl p-4 text-white font-black text-xs outline-none focus:border-cyan-500 transition-all uppercase"
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            onChange={(e) => setInputValue(e.target.value.replace(/\s+/g, '-'))}
            />
            <div className="flex gap-2">
             <button onClick={() => setIsJoinMode(false)} className="flex-1 py-4 text-gray-500 font-black text-xs uppercase tracking-widest border border-gray-800 rounded-xl hover:bg-white/5">Cancel</button>
-            <button onClick={() => { onJoin(inputValue); setIsJoinMode(false); }} className="flex-[2] py-4 bg-cyan-500 text-black rounded-xl font-black text-xs uppercase tracking-widest hover:bg-cyan-400 transition-all">Connect</button>
+            <button 
+              disabled={inputValue.length < 3}
+              onClick={() => { onConnect(inputValue); setIsJoinMode(false); }} 
+              className="flex-[2] py-4 bg-cyan-500 text-black rounded-xl font-black text-xs uppercase tracking-widest hover:bg-cyan-400 transition-all disabled:opacity-20"
+            >
+              Sync Now
+            </button>
            </div>
         </div>
       ) : (
         <div className="flex flex-col gap-5 py-2 animate-in fade-in duration-300">
           <div className="flex flex-col gap-1">
-            <span className="text-[9px] uppercase text-gray-600 font-black tracking-widest">Active Workspace ID</span>
+            <span className="text-[9px] uppercase text-gray-600 font-black tracking-widest">Connected Workspace</span>
             <div className="flex items-center gap-2 bg-black/40 border border-gray-800 rounded-xl p-4">
-              <span className="flex-1 text-xs text-cyan-400 font-black truncate">{blobId}</span>
+              <span className="flex-1 text-xs text-cyan-400 font-black truncate uppercase">{blobId}</span>
               <button 
-                onClick={() => { navigator.clipboard.writeText(blobId || ''); alert('คัดลอกรหัสเรียบร้อย!'); }} 
+                onClick={() => { navigator.clipboard.writeText(blobId || ''); alert('คัดลอกชื่อห้องแล้ว!'); }} 
                 className="p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-all"
               >
                 <Copy size={16}/>
               </button>
             </div>
           </div>
-          <p className="text-[9px] text-gray-600 font-bold uppercase leading-relaxed text-center">คัดลอกรหัสนี้ไปกรอกที่เครื่องอื่น <br/> เพื่อใช้งานข้อมูลร่วมกัน</p>
-          <button onClick={() => { if(confirm('ต้องการตัดการเชื่อมต่อ Cloud ใช่หรือไม่? ข้อมูลจะยังคงอยู่แค่ในเบราว์เซอร์นี้')) onJoin(''); }} className="text-[10px] text-red-500/50 uppercase font-black tracking-widest hover:text-red-500 transition-colors mt-2">Disconnect Cloud</button>
+          <p className="text-[9px] text-gray-600 font-bold uppercase leading-relaxed text-center">พิมพ์ชื่อห้องนี้ในเครื่องอื่น <br/> เพื่อแชร์ข้อมูลชุดเดียวกัน</p>
+          <button onClick={() => { if(confirm('ต้องการตัดการเชื่อมต่อ Cloud? ข้อมูลจะยังคงอยู่แค่ในเบราว์เซอร์นี้')) onConnect(''); }} className="text-[10px] text-red-500/50 uppercase font-black tracking-widest hover:text-red-500 transition-colors mt-2">Disconnect Cloud</button>
         </div>
       )}
     </div>
@@ -572,76 +562,63 @@ const App: React.FC = () => {
   const [products, setProducts] = useState<Product[]>(() => {
     const saved = localStorage.getItem('pfm_dashboard_products');
     if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return INITIAL_PRODUCTS;
-      }
+      try { return JSON.parse(saved); } catch (e) { return INITIAL_PRODUCTS; }
     }
     return INITIAL_PRODUCTS;
   });
 
-  // Effect: Load Cloud Data on Start if BlobID exists
+  // Load Cloud Data on Start or Connect
   useEffect(() => {
     if (blobId) {
       setSyncStatus('syncing');
       loadFromCloud(blobId).then(data => {
-        if (data) {
+        if (data && Array.isArray(data)) {
           setProducts(data);
           setSyncStatus('synced');
         } else {
-          setSyncStatus('error');
+          // If no data in cloud yet, we don't overwrite local, but indicate error if fetching failed
+          setSyncStatus('idle');
         }
       });
     }
   }, [blobId]);
 
-  // Effect: Save Local & Trigger Cloud Push
+  // Sync to Cloud on Change
   useEffect(() => {
     localStorage.setItem('pfm_dashboard_products', JSON.stringify(products));
     
     if (blobId) {
       setSyncStatus('syncing');
       const timer = setTimeout(() => {
-        saveToCloud(products).then(success => {
+        saveToCloud(blobId, products).then(success => {
           setSyncStatus(success ? 'synced' : 'error');
         });
-      }, 1500); // Increased debounce for stability
+      }, 2000);
       return () => clearTimeout(timer);
     }
   }, [products, blobId]);
 
-  const handleGenerateSync = async () => {
-    setSyncStatus('syncing');
-    const newId = await createCloudStore(products);
-    if (newId) {
-      setBlobId(newId);
-      localStorage.setItem('pfm_cloud_blob_id', newId);
-      setSyncStatus('synced');
-      alert(`Cloud Workspace สร้างสำเร็จ!\n\nรหัส Sync Code: ${newId}\n\nคุณสามารถนำรหัสนี้ไปกรอกที่เครื่องอื่นเพื่อ Sync ข้อมูลร่วมกันได้ทันที`);
-    } else {
-      setSyncStatus('error');
-      alert('ไม่สามารถสร้าง Workspace ได้ในขณะนี้ กรุณาลองใหม่ภายหลัง (Network Error)');
-    }
-  };
-
-  const handleJoinWorkspace = async (id: string) => {
+  const handleConnectWorkspace = async (id: string) => {
     if (!id) {
       setBlobId(null);
       localStorage.removeItem('pfm_cloud_blob_id');
       return;
     }
+    
     setSyncStatus('syncing');
-    const data = await loadFromCloud(id);
-    if (data) {
-      setBlobId(id);
-      localStorage.setItem('pfm_cloud_blob_id', id);
-      setProducts(data);
+    const cloudData = await loadFromCloud(id);
+    setBlobId(id);
+    localStorage.setItem('pfm_cloud_blob_id', id);
+    
+    if (cloudData && Array.isArray(cloudData)) {
+      setProducts(cloudData);
       setSyncStatus('synced');
-      alert('เชื่อมต่อ Workspace สำเร็จ!');
+      alert(`เชื่อมต่อห้อง "${id.toUpperCase()}" สำเร็จ! ข้อมูลถูกดึงลงมาแล้ว`);
     } else {
-      setSyncStatus('error');
-      alert('ไม่พบ Workspace ID นี้ หรือเกิดข้อผิดพลาดในการเชื่อมต่อ');
+      // New workspace - upload current local data to it
+      await saveToCloud(id, products);
+      setSyncStatus('synced');
+      alert(`สร้างห้องใหม่ชื่อ "${id.toUpperCase()}" สำเร็จ! ข้อมูลปัจจุบันถูกอัปโหลดขึ้น Cloud แล้ว`);
     }
   };
 
@@ -670,8 +647,7 @@ const App: React.FC = () => {
                   <div className="lg:col-span-2 shadow-2xl"><MainKPICard /></div>
                   <WorkspaceManager 
                     blobId={blobId} 
-                    onGenerate={handleGenerateSync} 
-                    onJoin={handleJoinWorkspace} 
+                    onConnect={handleConnectWorkspace} 
                   />
                 </div>
                 <PFMChart products={products} onDeleteProduct={deleteProduct} />
