@@ -40,21 +40,20 @@ import {
 import { extractProductFromImage } from './geminiService';
 import { Product } from './types';
 
-// --- Cloud Sync Helper ---
-// We use a simple public KV store (jsonblob or similar logic)
-const SYNC_API_BASE = 'https://jsonblob.com/api/jsonBlob';
+// --- Cloud Sync Helper (Using npoint.io for better CORS support) ---
+const SYNC_API_BASE = 'https://api.npoint.io';
 
 const saveToCloud = async (data: Product[]) => {
   const blobId = localStorage.getItem('pfm_cloud_blob_id');
   if (!blobId) return null;
   
   try {
-    await fetch(`${SYNC_API_BASE}/${blobId}`, {
-      method: 'PUT',
+    const res = await fetch(`${SYNC_API_BASE}/${blobId}`, {
+      method: 'POST', // npoint uses POST for updates to existing bins
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    return true;
+    return res.ok;
   } catch (e) {
     console.error("Cloud Save Error:", e);
     return false;
@@ -79,13 +78,13 @@ const createCloudStore = async (initialData: Product[]) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(initialData)
     });
-    const location = res.headers.get('Location');
-    if (location) {
-      const id = location.split('/').pop();
-      return id;
+    const result = await res.json();
+    // npoint returns { "id": "xxxx" }
+    if (result && result.id) {
+      return result.id;
     }
   } catch (e) {
-    console.error("Cloud Create Error:", e);
+    console.error("Cloud Create Error Detail:", e);
   }
   return null;
 };
@@ -189,7 +188,7 @@ const WorkspaceManager = ({ blobId, onGenerate, onJoin }: { blobId: string | nul
             <div className="flex items-center gap-2 bg-black/40 border border-gray-800 rounded-xl p-4">
               <span className="flex-1 text-xs text-cyan-400 font-black truncate">{blobId}</span>
               <button 
-                onClick={() => { navigator.clipboard.writeText(blobId); alert('Copied Code!'); }} 
+                onClick={() => { navigator.clipboard.writeText(blobId || ''); alert('Copied Code!'); }} 
                 className="p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-all"
               >
                 <Copy size={16}/>
@@ -197,7 +196,7 @@ const WorkspaceManager = ({ blobId, onGenerate, onJoin }: { blobId: string | nul
             </div>
           </div>
           <p className="text-[9px] text-gray-600 font-bold uppercase leading-relaxed text-center">คัดลอกรหัสนี้ไปกรอกที่เครื่องอื่น <br/> เพื่อใช้งานข้อมูลร่วมกัน</p>
-          <button onClick={() => { if(confirm('Leave current workspace? Your data will remain only on this browser.')) onJoin(''); }} className="text-[10px] text-red-500/50 uppercase font-black tracking-widest hover:text-red-500 transition-colors mt-2">Disconnect Cloud</button>
+          <button onClick={() => { if(confirm('ต้องการตัดการเชื่อมต่อ Cloud ใช่หรือไม่? ข้อมูลจะยังคงอยู่แค่ในเบราว์เซอร์นี้')) onJoin(''); }} className="text-[10px] text-red-500/50 uppercase font-black tracking-widest hover:text-red-500 transition-colors mt-2">Disconnect Cloud</button>
         </div>
       )}
     </div>
@@ -607,7 +606,7 @@ const App: React.FC = () => {
         saveToCloud(products).then(success => {
           setSyncStatus(success ? 'synced' : 'error');
         });
-      }, 1000); // Debounce
+      }, 1500); // Increased debounce for stability
       return () => clearTimeout(timer);
     }
   }, [products, blobId]);
@@ -619,10 +618,10 @@ const App: React.FC = () => {
       setBlobId(newId);
       localStorage.setItem('pfm_cloud_blob_id', newId);
       setSyncStatus('synced');
-      alert(`Cloud Workspace Created!\n\nID: ${newId}\n\nUse this ID to sync with other devices.`);
+      alert(`Cloud Workspace สร้างสำเร็จ!\n\nID: ${newId}\n\nคุณสามารถนำ ID นี้ไปกรอกที่เครื่องอื่นเพื่อ Sync ข้อมูลร่วมกันได้ทันที`);
     } else {
       setSyncStatus('error');
-      alert('Failed to create workspace.');
+      alert('ไม่สามารถสร้าง Workspace ได้ในขณะนี้ กรุณาลองใหม่ภายหลัง');
     }
   };
 
@@ -639,10 +638,10 @@ const App: React.FC = () => {
       localStorage.setItem('pfm_cloud_blob_id', id);
       setProducts(data);
       setSyncStatus('synced');
-      alert('Workspace Connected Successfully!');
+      alert('เชื่อมต่อ Workspace สำเร็จ!');
     } else {
       setSyncStatus('error');
-      alert('Invalid Workspace ID or Connection Error.');
+      alert('ไม่พบ Workspace ID นี้ หรือเกิดข้อผิดพลาดในการเชื่อมต่อ');
     }
   };
 
