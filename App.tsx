@@ -40,8 +40,8 @@ import {
 import { extractProductFromImage } from './geminiService';
 import { Product } from './types';
 
-// --- Cloud Sync Helper (Using npoint.io for better CORS support) ---
-const SYNC_API_BASE = 'https://api.npoint.io';
+// --- Cloud Sync Helper (Updated for correct npoint.io API structure) ---
+const SYNC_API_BASE = 'https://api.npoint.io/bins';
 
 const saveToCloud = async (data: Product[]) => {
   const blobId = localStorage.getItem('pfm_cloud_blob_id');
@@ -49,7 +49,7 @@ const saveToCloud = async (data: Product[]) => {
   
   try {
     const res = await fetch(`${SYNC_API_BASE}/${blobId}`, {
-      method: 'POST', // npoint uses POST for updates to existing bins
+      method: 'PUT', // Use PUT to overwrite the entire bin data
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
@@ -76,10 +76,10 @@ const createCloudStore = async (initialData: Product[]) => {
     const res = await fetch(SYNC_API_BASE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(initialData)
+      body: JSON.stringify({ contents: initialData }) // npoint creation format
     });
     const result = await res.json();
-    // npoint returns { "id": "xxxx" }
+    // npoint returns { "id": "xxxx", "contents": [...] }
     if (result && result.id) {
       return result.id;
     }
@@ -188,7 +188,7 @@ const WorkspaceManager = ({ blobId, onGenerate, onJoin }: { blobId: string | nul
             <div className="flex items-center gap-2 bg-black/40 border border-gray-800 rounded-xl p-4">
               <span className="flex-1 text-xs text-cyan-400 font-black truncate">{blobId}</span>
               <button 
-                onClick={() => { navigator.clipboard.writeText(blobId || ''); alert('Copied Code!'); }} 
+                onClick={() => { navigator.clipboard.writeText(blobId || ''); alert('คัดลอกรหัสเรียบร้อย!'); }} 
                 className="p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-all"
               >
                 <Copy size={16}/>
@@ -618,10 +618,10 @@ const App: React.FC = () => {
       setBlobId(newId);
       localStorage.setItem('pfm_cloud_blob_id', newId);
       setSyncStatus('synced');
-      alert(`Cloud Workspace สร้างสำเร็จ!\n\nID: ${newId}\n\nคุณสามารถนำ ID นี้ไปกรอกที่เครื่องอื่นเพื่อ Sync ข้อมูลร่วมกันได้ทันที`);
+      alert(`Cloud Workspace สร้างสำเร็จ!\n\nรหัส Sync Code: ${newId}\n\nคุณสามารถนำรหัสนี้ไปกรอกที่เครื่องอื่นเพื่อ Sync ข้อมูลร่วมกันได้ทันที`);
     } else {
       setSyncStatus('error');
-      alert('ไม่สามารถสร้าง Workspace ได้ในขณะนี้ กรุณาลองใหม่ภายหลัง');
+      alert('ไม่สามารถสร้าง Workspace ได้ในขณะนี้ กรุณาลองใหม่ภายหลัง (Network Error)');
     }
   };
 
