@@ -253,8 +253,12 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
       data.mainProduct = 'Julaherb';
       setExtractedData(data);
     } catch (e: any) { 
+      console.error("OCR Error:", e);
       const errorStr = JSON.stringify(e).toLowerCase();
-      setErrorMessage(errorStr.includes('429') ? "Server busy (Quota limit). Please wait 60s and try again." : "Extraction failed. Please ensure the screenshot is clear.");
+      // If deployed, we need to know what specifically went wrong (API Key or something else)
+      let displayError = e.message || "Extraction failed. Please check your internet or API key.";
+      if (errorStr.includes('429')) displayError = "Server busy (Quota limit). Please wait 60s and try again.";
+      setErrorMessage(displayError);
     } finally { 
       setIsUploading(false); 
     }
@@ -276,43 +280,43 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
   };
 
   return (
-    <div className="max-w-6xl mx-auto py-10 space-y-8 animate-in fade-in duration-700">
-      <div className="bg-[#1a1c20]/40 rounded-3xl border border-gray-800 p-10 shadow-2xl backdrop-blur-xl">
-        <div className="flex flex-col items-center mb-10">
-          <div className="w-20 h-20 bg-cyan-500/10 rounded-2xl flex items-center justify-center text-cyan-400 mb-6 border border-cyan-500/20 shadow-inner"><CloudUpload size={40} /></div>
-          <h2 className="text-3xl font-black text-white uppercase tracking-[0.2em]">Performance Data OCR</h2>
-          <p className="text-gray-500 text-sm mt-3 font-medium">Upload or <span className="text-cyan-400 font-bold underline">Paste (Ctrl+V)</span> screenshot to begin</p>
+    <div className="max-w-7xl mx-auto py-10 space-y-8 animate-in fade-in duration-700">
+      <div className="bg-[#1a1c20]/40 rounded-3xl border border-gray-800 p-12 shadow-2xl backdrop-blur-xl">
+        <div className="flex flex-col items-center mb-12">
+          <div className="w-24 h-24 bg-cyan-500/10 rounded-2xl flex items-center justify-center text-cyan-400 mb-6 border border-cyan-500/20 shadow-inner"><CloudUpload size={48} /></div>
+          <h2 className="text-4xl font-black text-white uppercase tracking-[0.2em]">Performance Data OCR</h2>
+          <p className="text-gray-500 text-base mt-4 font-medium">Upload or <span className="text-cyan-400 font-bold underline">Paste (Ctrl+V)</span> screenshot to begin mapping</p>
         </div>
 
         {errorMessage && (
-          <div className="mb-8 p-5 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-4 text-red-400 animate-pulse">
-            <AlertCircle size={24} />
+          <div className="mb-10 p-6 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-5 text-red-400 animate-pulse">
+            <AlertCircle size={32} />
             <div className="flex flex-col">
-              <span className="text-xs font-black uppercase tracking-widest">Processing Error</span>
-              <span className="text-xs opacity-80">{errorMessage}</span>
+              <span className="text-sm font-black uppercase tracking-widest">Processing Error</span>
+              <span className="text-xs opacity-90 font-medium">{errorMessage}</span>
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 items-start">
-          {/* Upload Section */}
-          <div className="lg:col-span-2 space-y-6">
-            <div onClick={() => !isUploading && fileInputRef.current?.click()} className={`aspect-[4/5] rounded-3xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all duration-300 overflow-hidden relative group ${imagePreview ? 'border-cyan-500/50' : 'border-gray-800 hover:border-gray-700 bg-black/20'}`}>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
+          {/* Upload Section (Wider Column) */}
+          <div className="lg:col-span-5 space-y-8">
+            <div onClick={() => !isUploading && fileInputRef.current?.click()} className={`aspect-[4/5] rounded-[2.5rem] border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all duration-300 overflow-hidden relative group ${imagePreview ? 'border-cyan-500/50 shadow-2xl shadow-cyan-500/10' : 'border-gray-800 hover:border-gray-700 bg-black/20'}`}>
               {imagePreview ? (
                 <>
                   <img src={imagePreview} className="w-full h-full object-cover" alt="" />
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-sm">
-                    <div className="bg-white/10 p-4 rounded-full border border-white/20">
-                      <Camera className="text-white" size={40} />
+                    <div className="bg-white/10 p-6 rounded-full border border-white/20">
+                      <Camera className="text-white" size={48} />
                     </div>
                   </div>
                 </>
               ) : (
-                <div className="flex flex-col items-center gap-5 opacity-40 group-hover:opacity-100 transition-opacity p-8 text-center">
-                  <div className="p-6 bg-gray-900/50 rounded-full border border-gray-800">
-                    <ClipboardPaste className="text-gray-400" size={48} />
+                <div className="flex flex-col items-center gap-6 opacity-40 group-hover:opacity-100 transition-opacity p-12 text-center">
+                  <div className="p-8 bg-gray-900/50 rounded-full border border-gray-800">
+                    <ClipboardPaste className="text-gray-400" size={64} />
                   </div>
-                  <span className="text-gray-500 font-bold text-xs uppercase tracking-[0.3em]">Click or Paste Screenshot</span>
+                  <span className="text-gray-500 font-bold text-sm uppercase tracking-[0.4em]">Select or Paste Screenshot</span>
                 </div>
               )}
               <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onload=ev=>setImagePreview(ev.target?.result as string); r.readAsDataURL(f); }}} />
@@ -320,113 +324,116 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
             {imagePreview && !isUploading && (
               <button 
                 onClick={() => {setImagePreview(null); setExtractedData(null); setCustomThumb(null); setErrorMessage(null);}} 
-                className="w-full py-4 text-red-400 text-xs font-black uppercase tracking-[0.2em] hover:bg-red-500/10 rounded-2xl border border-red-500/20 transition-all"
+                className="w-full py-5 text-red-400 text-xs font-black uppercase tracking-[0.2em] hover:bg-red-500/10 rounded-2xl border border-red-500/20 transition-all shadow-lg"
               >
-                Discard Media
+                Discard Current Media
               </button>
             )}
           </div>
 
-          {/* Results Section */}
-          <div className="lg:col-span-3 space-y-6">
+          {/* Results Section (Even Wider Column) */}
+          <div className="lg:col-span-7 space-y-8">
             {!extractedData && !isUploading && (
-              <div className="h-full flex flex-col justify-center gap-6 min-h-[400px]">
+              <div className="h-full flex flex-col justify-center gap-8 min-h-[500px]">
                 <button 
                   disabled={!imagePreview} 
                   onClick={processImage} 
-                  className="w-full bg-cyan-500 hover:bg-cyan-400 text-black py-8 rounded-3xl font-black uppercase tracking-[0.3em] text-sm transition-all shadow-2xl shadow-cyan-500/20 flex items-center justify-center gap-4 disabled:opacity-20 disabled:grayscale"
+                  className="w-full bg-cyan-500 hover:bg-cyan-400 text-black py-10 rounded-[2.5rem] font-black uppercase tracking-[0.4em] text-base transition-all shadow-[0_20px_50px_rgba(34,211,238,0.3)] flex items-center justify-center gap-5 disabled:opacity-20 disabled:grayscale"
                 >
-                  <Plus size={24} /> START AI ANALYSIS
+                  <Plus size={32} /> EXECUTE AI ANALYTICS
                 </button>
-                <div className="bg-white/5 border border-white/5 p-8 rounded-3xl text-center">
-                  <p className="text-xs text-gray-500 font-bold uppercase tracking-widest leading-relaxed">
-                    AI will automatically detect metrics like Views, Retention, Engagement and calculate PFM scores based on your screenshot data.
+                <div className="bg-white/5 border border-white/5 p-10 rounded-[2.5rem] text-center border-dashed">
+                  <p className="text-sm text-gray-500 font-bold uppercase tracking-widest leading-relaxed">
+                    Our AI models will dissect the screenshot to extract key performance layers. Verification will be required before publishing to the live dashboard.
                   </p>
                 </div>
               </div>
             )}
             
             {isUploading && (
-              <div className="h-full flex flex-col items-center justify-center py-20 bg-black/20 rounded-3xl border border-white/5">
+              <div className="h-full flex flex-col items-center justify-center py-24 bg-black/20 rounded-[2.5rem] border border-white/5 shadow-inner">
                 <div className="relative">
-                  <Loader2 size={64} className="text-cyan-400 animate-spin mb-8" />
-                  <div className="absolute inset-0 blur-2xl bg-cyan-500/20 rounded-full"></div>
+                  <Loader2 size={80} className="text-cyan-400 animate-spin mb-10" />
+                  <div className="absolute inset-0 blur-3xl bg-cyan-500/30 rounded-full animate-pulse"></div>
                 </div>
-                <p className="text-cyan-400 font-black uppercase text-xs tracking-[0.4em] animate-pulse">Syncing performance cloud...</p>
+                <p className="text-cyan-400 font-black uppercase text-sm tracking-[0.5em] animate-pulse">Synchronizing performance data...</p>
+                <span className="text-[10px] text-gray-600 uppercase font-bold mt-4 tracking-[0.2em]">Contacting Gemini API Layer V3</span>
               </div>
             )}
             
             {extractedData && (
-              <div className="bg-[#16181b] rounded-3xl p-8 border border-white/5 space-y-8 animate-in slide-in-from-right-8 duration-500 shadow-2xl">
-                <div className="flex items-center justify-between text-cyan-400 border-b border-white/5 pb-6">
-                  <div className="flex items-center gap-4">
-                    <CheckCircle2 size={24} />
-                    <span className="text-sm font-black uppercase tracking-[0.2em]">Data Verification Layer</span>
+              <div className="bg-[#16181b] rounded-[2.5rem] p-10 border border-white/5 space-y-10 animate-in slide-in-from-right-12 duration-700 shadow-2xl">
+                <div className="flex items-center justify-between text-cyan-400 border-b border-white/5 pb-8">
+                  <div className="flex items-center gap-5">
+                    <CheckCircle2 size={28} />
+                    <span className="text-lg font-black uppercase tracking-[0.3em]">Verification Hub</span>
                   </div>
-                  <button onClick={() => setExtractedData(null)} className="text-gray-500 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-full">
-                    <X size={24}/>
+                  <button onClick={() => setExtractedData(null)} className="text-gray-500 hover:text-white transition-colors p-3 hover:bg-white/5 rounded-full">
+                    <X size={28}/>
                   </button>
                 </div>
                 
-                <div className="flex gap-8 items-start">
+                <div className="flex gap-10 items-start">
                   <div className="relative group shrink-0">
-                    <div className="w-28 h-40 bg-gray-900 rounded-2xl overflow-hidden border border-cyan-500/30 relative shadow-2xl transition-all group-hover:border-cyan-400">
+                    <div className="w-36 h-48 bg-gray-900 rounded-3xl overflow-hidden border border-cyan-500/30 relative shadow-2xl transition-all group-hover:border-cyan-400 group-hover:scale-[1.02]">
                       <img src={customThumb || imagePreview || ''} className="w-full h-full object-cover" alt="" />
                       <div onClick={() => customThumbInputRef.current?.click()} className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity backdrop-blur-sm">
-                        <Camera size={24} className="text-white"/>
+                        <Camera size={32} className="text-white"/>
                       </div>
                     </div>
                   </div>
-                  <div className="flex-1 space-y-4">
-                    <span className="text-[10px] font-black uppercase text-gray-500 block mb-1 tracking-widest">Content Headline</span>
-                    <input 
-                      className="bg-black/30 border border-gray-800 rounded-xl w-full text-white text-sm font-black p-4 focus:border-cyan-500 outline-none transition-all shadow-inner focus:ring-4 focus:ring-cyan-500/5" 
-                      value={extractedData.name || ''} 
-                      onChange={e => setExtractedData({...extractedData, name: e.target.value})} 
-                    />
-                    <div className="flex gap-3">
-                      <button onClick={() => customThumbInputRef.current?.click()} className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border border-gray-700 transition-all flex items-center justify-center gap-3">
-                        <ImageIcon size={18} /> Update Media
+                  <div className="flex-1 space-y-6">
+                    <div>
+                      <span className="text-[10px] font-black uppercase text-gray-500 block mb-2 tracking-widest">Target Content Headline</span>
+                      <input 
+                        className="bg-black/30 border border-gray-800 rounded-2xl w-full text-white text-base font-black p-5 focus:border-cyan-500 outline-none transition-all shadow-inner focus:ring-4 focus:ring-cyan-500/10" 
+                        value={extractedData.name || ''} 
+                        onChange={e => setExtractedData({...extractedData, name: e.target.value})} 
+                      />
+                    </div>
+                    <div className="flex gap-4">
+                      <button onClick={() => customThumbInputRef.current?.click()} className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 py-5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] border border-gray-700 transition-all flex items-center justify-center gap-4">
+                        <ImageIcon size={20} /> Replace Media
                       </button>
                       {customThumb && (
-                        <button onClick={() => setCustomThumb(null)} className="px-5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl border border-red-500/20 transition-all">
-                          <X size={24}/>
+                        <button onClick={() => setCustomThumb(null)} className="px-6 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-2xl border border-red-500/20 transition-all">
+                          <X size={28}/>
                         </button>
                       )}
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-4 bg-black/20 p-6 rounded-[2rem] border border-white/5">
+                <div className="grid grid-cols-4 gap-6 bg-black/20 p-8 rounded-[2.5rem] border border-white/5">
                   {[
                     { l: 'DU', k: 'du' }, { l: 'AVG.W', k: 'avgW' }, { l: 'RE', k: 're' }, { l: 'VW', k: 'vw' },
                     { l: 'LK', k: 'lk' }, { l: 'BM', k: 'bm' }, { l: 'CM', k: 'cm' }, { l: 'SH', k: 'sh' },
                     { l: 'CPM', k: 'cpm' }, { l: 'CPE', k: 'cpe' }
                   ].map(f => (
                     <div key={f.k}>
-                      <span className="text-[9px] font-black text-gray-600 block uppercase mb-2 tracking-tighter">{f.l}</span>
+                      <span className="text-[10px] font-black text-gray-600 block uppercase mb-3 tracking-tighter">{f.l}</span>
                       <input 
-                        className="bg-gray-900 border border-gray-800 w-full rounded-xl p-3 text-[11px] text-white font-black text-center focus:border-cyan-500 outline-none transition-all shadow-inner" 
+                        className="bg-gray-900 border border-gray-800 w-full rounded-2xl p-4 text-xs text-white font-black text-center focus:border-cyan-500 outline-none transition-all shadow-inner" 
                         value={(extractedData as any)[f.k] || ''} 
                         onChange={e => setExtractedData({...extractedData, [f.k]: e.target.value})} 
                       />
                     </div>
                   ))}
                   <div className="col-span-2">
-                    <span className="text-[9px] font-black text-cyan-600 block uppercase mb-2 tracking-widest">Efficiency Rank</span>
-                    <input className="bg-cyan-500/10 border border-cyan-500/20 w-full rounded-xl p-3 text-xs text-cyan-400 font-black text-center focus:border-cyan-400 outline-none shadow-inner" value={extractedData.pfm || ''} onChange={e => setExtractedData({...extractedData, pfm: e.target.value})} />
+                    <span className="text-[10px] font-black text-cyan-600 block uppercase mb-3 tracking-widest">PFM Effectiveness</span>
+                    <input className="bg-cyan-500/10 border border-cyan-500/20 w-full rounded-2xl p-4 text-sm text-cyan-400 font-black text-center focus:border-cyan-400 outline-none shadow-inner" value={extractedData.pfm || ''} onChange={e => setExtractedData({...extractedData, pfm: e.target.value})} />
                   </div>
                   <div className="col-span-2">
-                    <span className="text-[9px] font-black text-emerald-600 block uppercase mb-2 tracking-widest">Brand Ecosystem</span>
-                    <select className="bg-emerald-500/10 border border-emerald-500/20 w-full rounded-xl p-3 text-xs text-emerald-400 font-black outline-none focus:border-emerald-400 transition-all" value={extractedData.mainProduct} onChange={e => setExtractedData({...extractedData, mainProduct: e.target.value as any})}>
+                    <span className="text-[10px] font-black text-emerald-600 block uppercase mb-3 tracking-widest">Main Product Category</span>
+                    <select className="bg-emerald-500/10 border border-emerald-500/20 w-full rounded-2xl p-4 text-sm text-emerald-400 font-black outline-none focus:border-emerald-400 transition-all shadow-inner" value={extractedData.mainProduct} onChange={e => setExtractedData({...extractedData, mainProduct: e.target.value as any})}>
                       {['Julaherb', 'JDENT', 'Jarvit'].map(c => <option key={c} value={c} className="bg-[#1a1c20]">{c}</option>)}
                     </select>
                   </div>
                 </div>
 
-                <div className="pt-4 flex gap-4">
-                  <button onClick={() => {setExtractedData(null); setCustomThumb(null);}} className="flex-1 py-6 text-xs font-black uppercase tracking-[0.2em] text-gray-500 border border-gray-800 rounded-[2rem] hover:text-white hover:bg-white/5 transition-all">Cancel</button>
-                  <button onClick={confirmAdd} className="flex-[2] py-6 bg-cyan-500 text-black rounded-[2rem] font-black uppercase text-xs tracking-[0.3em] shadow-2xl shadow-cyan-500/20 hover:bg-cyan-400 transition-all">Publish to Dashboard</button>
+                <div className="pt-6 flex gap-6">
+                  <button onClick={() => {setExtractedData(null); setCustomThumb(null);}} className="flex-1 py-7 text-xs font-black uppercase tracking-[0.3em] text-gray-500 border border-gray-800 rounded-[2.5rem] hover:text-white hover:bg-white/5 transition-all">Cancel Sync</button>
+                  <button onClick={confirmAdd} className="flex-[2] py-7 bg-cyan-500 text-black rounded-[2.5rem] font-black uppercase text-xs tracking-[0.4em] shadow-2xl shadow-cyan-500/30 hover:bg-cyan-400 transition-all">Publish Content Layer</button>
                 </div>
               </div>
             )}
@@ -448,19 +455,19 @@ const App: React.FC = () => {
     <div className="flex min-h-screen bg-[#0d0f12] text-slate-200">
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
       <div className="flex-1 flex flex-col">
-        <TopBar title={activeTab === 'dashboard' ? 'Real-time Analytics' : 'Content Media Hub'} />
-    <main className="ml-16 p-8 flex-1 overflow-y-auto">
-          <div className="max-w-[1500px] mx-auto space-y-8">
+        <TopBar title={activeTab === 'dashboard' ? 'Live Analytics Center' : 'Content Media Pipeline'} />
+        <main className="ml-16 p-8 flex-1 overflow-y-auto">
+          <div className="max-w-[1600px] mx-auto space-y-10">
             {activeTab === 'dashboard' ? (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  <div className="md:col-span-2 shadow-2xl"><MainKPICard /></div>
-                  <div className="bg-[#1a1c20] rounded-2xl border border-gray-800 p-8 flex flex-col items-center justify-center text-center gap-8 shadow-2xl relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <div className="w-24 h-24 rounded-full bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 shadow-inner group-hover:scale-105 transition-transform duration-500"><User size={48} className="text-cyan-400" /></div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                  <div className="lg:col-span-2 shadow-2xl"><MainKPICard /></div>
+                  <div className="bg-[#1a1c20] rounded-[2rem] border border-gray-800 p-10 flex flex-col items-center justify-center text-center gap-10 shadow-2xl relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                    <div className="w-32 h-32 rounded-full bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 shadow-inner group-hover:scale-110 transition-transform duration-500"><User size={64} className="text-cyan-400" /></div>
                     <div className="relative z-10">
-                      <div className="font-black uppercase text-white tracking-[0.2em] text-lg">Administrator Panel</div>
-                      <div className="text-[9px] text-gray-500 font-black uppercase tracking-widest mt-2 opacity-60">Professional E-Commerce V2.0</div>
+                      <div className="font-black uppercase text-white tracking-[0.3em] text-xl">Administrator Panel</div>
+                      <div className="text-[10px] text-gray-500 font-black uppercase tracking-[0.4em] mt-3 opacity-60">Professional E-Commerce Suite V2.5</div>
                     </div>
                   </div>
                 </div>
