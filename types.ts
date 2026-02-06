@@ -15,6 +15,8 @@ export interface Product {
   id: number;
   thumbnail: string;
   name: string;
+  /** TikTok Video ID extracted from analytics */
+  tiktokId?: string;
   du: string;
   avgW: string;
   re: string;
