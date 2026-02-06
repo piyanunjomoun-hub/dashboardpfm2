@@ -197,7 +197,7 @@ const PFMChart = ({ products, onDeleteProduct }: { products: Product[], onDelete
                           </div>
                         )}
                         <button 
-                          onClick={(e) => { e.stopPropagation(); if(confirm('Delete this record?')) onDeleteProduct(p.id); }} 
+                          onClick={(e) => { e.stopPropagation(); if(confirm('ต้องการลบข้อมูลนี้ใช่หรือไม่?')) onDeleteProduct(p.id); }} 
                           className="ml-4 p-2 text-gray-600 hover:text-red-500 transition-colors bg-red-500/5 rounded-lg border border-red-500/10"
                           title="Delete content"
                         >
@@ -263,22 +263,12 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
       setExtractedData(data);
     } catch (e: any) { 
       console.error("OCR API Full Error Object:", e);
-      let displayError = "An unexpected error occurred.";
+      let displayError = e.message || "เกิดข้อผิดพลาดในการประมวลผลภาพ";
       
-      if (e.message) {
-        displayError = e.message;
-      } else if (typeof e === 'string') {
-        displayError = e;
-      } else {
-        displayError = JSON.stringify(e);
-      }
-
       if (displayError.includes("429")) {
         displayError = "Quota Exhausted (429): คุณใช้งานเกินโควต้าฟรีของวันนี้แล้ว กรุณาลองใหม่ในอีก 60 วินาที หรือพรุ่งนี้";
       } else if (displayError.includes("API_KEY_MISSING")) {
-        displayError = "Missing API Key: ไม่พบ API Key ใน Environment Variable ของ GitHub กรุณาตั้งค่าความลับ (Secrets)";
-      } else if (displayError.includes("API_KEY_INVALID")) {
-        displayError = "Invalid API Key: คีย์ที่คุณใช้อยู่ไม่ถูกต้องหรือถูกระงับ";
+        displayError = "Missing API Key: ไม่พบ API Key ในระบบกรุณาตั้งค่า Secrets ใน GitHub";
       }
 
       setErrorMessage(displayError);
@@ -298,7 +288,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
       };
       onAddProduct(p);
       setExtractedData(null); setImagePreview(null); setCustomThumb(null); setErrorMessage(null);
-      alert("Added successfully.");
+      alert("บันทึกข้อมูลเรียบร้อยแล้ว");
     }
   };
 
@@ -317,7 +307,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
             <div className="flex flex-col">
               <span className="text-sm font-black uppercase tracking-widest">Processing Error</span>
               <span className="text-xs opacity-90 font-medium break-all">{errorMessage}</span>
-              <span className="text-[10px] mt-2 opacity-50 italic">* หากอยู่บน GitHub กรุณาตรวจสอบว่าได้ตั้งค่า API_KEY ใน Repository Secrets แล้วหรือไม่</span>
+              <span className="text-[10px] mt-2 opacity-50 italic">* หากแกะข้อมูลไม่สำเร็จ กรุณาใช้ภาพ Screenshot ที่ชัดเจนและเห็นตารางข้อมูลครบถ้วน</span>
             </div>
           </div>
         )}
@@ -366,7 +356,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
                 </button>
                 <div className="bg-white/5 border border-white/5 p-10 rounded-[2.5rem] text-center border-dashed">
                   <p className="text-sm text-gray-500 font-bold uppercase tracking-widest leading-relaxed">
-                    AI will automatically analyze your image. If it fails, please check your network connection or API quota status.
+                    AI will automatically analyze your image. If it fails, please check your network connection or image quality.
                   </p>
                 </div>
               </div>
@@ -417,11 +407,6 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
                       <button onClick={() => customThumbInputRef.current?.click()} className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 py-5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] border border-gray-700 transition-all flex items-center justify-center gap-4">
                         <ImageIcon size={20} /> Update Media
                       </button>
-                      {customThumb && (
-                        <button onClick={() => setCustomThumb(null)} className="px-6 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-2xl border border-red-500/20 transition-all">
-                          <X size={28}/>
-                        </button>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -470,7 +455,6 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   
-  // Initial state logic: Try to load from localStorage first
   const [products, setProducts] = useState<Product[]>(() => {
     const saved = localStorage.getItem('pfm_dashboard_products');
     if (saved) {
@@ -484,7 +468,6 @@ const App: React.FC = () => {
     return INITIAL_PRODUCTS;
   });
 
-  // Persist products whenever they change
   useEffect(() => {
     localStorage.setItem('pfm_dashboard_products', JSON.stringify(products));
   }, [products]);
