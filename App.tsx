@@ -34,7 +34,8 @@ import {
   Link,
   Database,
   ShieldCheck,
-  Zap
+  Zap,
+  Edit3
 } from 'lucide-react';
 import { 
   PRODUCTS as INITIAL_PRODUCTS, 
@@ -44,7 +45,6 @@ import { extractProductFromImage } from './geminiService';
 import { Product } from './types';
 
 // --- Google Sheets Configuration ---
-// Make sure this URL is your published Google Apps Script Web App URL
 const GOOGLE_SHEET_APP_URL = 'https://script.google.com/macros/s/AKfycbyhOTmeDg40xgOSo_V3ndtzx0FcLfjl_uZrsAu4dPEzZuVE1LRNlr1FkDLK30bvZZdTlQ/exec'; 
 
 // --- Cloud API Wrappers ---
@@ -98,18 +98,18 @@ const TopBar = ({ title, syncStatus, lastSync }: { title: string, syncStatus: st
   <div className="h-14 bg-[#0d0f12] border-b border-gray-800 flex items-center justify-between px-6 sticky top-0 z-10 ml-16 backdrop-blur-md">
     <div className="flex items-center gap-4">
       <span className="text-gray-400 text-sm font-medium tracking-wide uppercase">{title}</span>
-      <div className="flex items-center gap-2 bg-gray-800/50 px-3 py-1 rounded-full text-[10px] font-bold text-cyan-400 border border-cyan-500/20 shadow-[0_0_10px_rgba(34,211,238,0.1)]">
+      <div className="flex items-center gap-2 bg-gray-800/50 px-3 py-1 rounded-full text-[10px] font-bold text-cyan-400 border border-cyan-500/20">
         <Globe size={12} className="animate-pulse" />
-        <span>GLOBAL DATABASE ACCESS</span>
+        <span>GLOBAL DATABASE</span>
       </div>
     </div>
     <div className="flex items-center gap-5">
-      {lastSync && <div className="text-[9px] font-bold text-gray-600 uppercase tracking-widest hidden md:block">Synchronized: {lastSync}</div>}
+      {lastSync && <div className="text-[9px] font-bold text-gray-600 uppercase tracking-widest hidden md:block">Sync: {lastSync}</div>}
       <div className="flex items-center gap-3">
-        {syncStatus === 'syncing' && <div className="flex items-center gap-2 text-[10px] font-black text-cyan-400 animate-pulse"><RefreshCw size={12} className="animate-spin" /> FETCHING MASTER DATA...</div>}
-        {syncStatus === 'saving' && <div className="flex items-center gap-2 text-[10px] font-black text-orange-400 animate-pulse"><CloudUpload size={12} /> BROADCASTING CHANGES...</div>}
-        {syncStatus === 'synced' && <div className="flex items-center gap-2 text-[10px] font-black text-emerald-400"><ShieldCheck size={12} /> GLOBAL CACHE SYNCED</div>}
-        {syncStatus === 'error' && <div className="flex items-center gap-2 text-[10px] font-black text-red-400"><AlertCircle size={12} /> CONNECTION ERROR</div>}
+        {syncStatus === 'syncing' && <div className="flex items-center gap-2 text-[10px] font-black text-cyan-400 animate-pulse"><RefreshCw size={12} className="animate-spin" /> FETCHING...</div>}
+        {syncStatus === 'saving' && <div className="flex items-center gap-2 text-[10px] font-black text-orange-400 animate-pulse"><CloudUpload size={12} /> BROADCASTING...</div>}
+        {syncStatus === 'synced' && <div className="flex items-center gap-2 text-[10px] font-black text-emerald-400"><ShieldCheck size={12} /> SYNCED</div>}
+        {syncStatus === 'error' && <div className="flex items-center gap-2 text-[10px] font-black text-red-400"><AlertCircle size={12} /> ERR</div>}
       </div>
     </div>
   </div>
@@ -152,22 +152,18 @@ const DatabaseStatusCard = ({ isConfigured }: { isConfigured: boolean }) => (
     <div className="flex flex-col gap-5 py-4 flex-1 justify-center">
       {isConfigured ? (
         <>
-          <div className="flex items-center gap-4 bg-emerald-500/10 border border-emerald-500/20 p-5 rounded-2xl animate-in zoom-in-95 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-             <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center text-black shrink-0 shadow-lg shadow-emerald-500/30"><Zap size={28} /></div>
+          <div className="flex items-center gap-4 bg-emerald-500/10 border border-emerald-500/20 p-5 rounded-2xl shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+             <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center text-black shrink-0"><Zap size={28} /></div>
              <div className="flex flex-col">
                <span className="text-emerald-400 font-black text-xs uppercase tracking-widest">Global Sync: Active</span>
-               <span className="text-gray-500 text-[10px] font-medium uppercase mt-0.5">Shared across all sessions</span>
+               <span className="text-gray-500 text-[10px] font-medium uppercase mt-0.5">Everyone sees the same data</span>
              </div>
           </div>
-          <p className="text-[10px] text-gray-400 font-bold uppercase leading-relaxed text-center px-4">
-            ข้อมูลชุดนี้จะอัปเดตไปที่ Cloud อัตโนมัติ <br/>
-            <span className="text-cyan-500 font-black">ทุกคนที่เข้าเว็บจะเห็นข้อมูลชุดเดียวกัน</span>
-          </p>
         </>
       ) : (
         <div className="flex flex-col items-center gap-4 text-center py-6">
            <AlertCircle size={48} className="text-orange-500/40" />
-           <p className="text-xs text-gray-500 font-bold leading-relaxed uppercase tracking-tighter">Please check your Google Script URL.</p>
+           <p className="text-xs text-gray-500 font-bold leading-relaxed uppercase tracking-tighter">Check your Google Apps Script URL.</p>
         </div>
       )}
     </div>
@@ -211,7 +207,7 @@ const PFMChart = ({ products, onDeleteProduct }: { products: Product[], onDelete
               </div>
             )}
           </div>
-          <div className="relative"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Filter..." className="bg-gray-800 text-xs py-2 pl-9 pr-4 rounded-xl border border-gray-700 w-48 outline-none" /></div>
+          <div className="relative"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search..." className="bg-gray-800 text-xs py-2 pl-9 pr-4 rounded-xl border border-gray-700 w-48 outline-none" /></div>
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -219,7 +215,7 @@ const PFMChart = ({ products, onDeleteProduct }: { products: Product[], onDelete
           <thead className="bg-[#16181b] text-[10px] text-gray-500 uppercase font-black tracking-widest">
             <tr>
               <th className="px-4 py-4 text-center">#</th>
-              <th className="px-6 py-4">Content</th>
+              <th className="px-6 py-4">Content Information</th>
               <th className="px-4 py-4 text-center">DU.</th>
               <th className="px-4 py-4 text-center">AVG.W</th>
               <th className="px-4 py-4 text-center">RE. %</th>
@@ -270,7 +266,7 @@ const PFMChart = ({ products, onDeleteProduct }: { products: Product[], onDelete
                           <span className="text-emerald-400 font-bold">฿{p.cpe}</span>
                         </div>
                         <div className="ml-auto">
-                           <button onClick={(e) => { e.stopPropagation(); if(confirm('Delete from global pool?')) onDeleteProduct(p.id); }} className="text-red-500 text-[10px] font-black uppercase hover:text-red-400 flex items-center gap-2"><Trash2 size={14}/> REMOVE</button>
+                           <button onClick={(e) => { e.stopPropagation(); if(confirm('Delete from global pool?')) onDeleteProduct(p.id); }} className="text-red-500 text-[10px] font-black uppercase flex items-center gap-2"><Trash2 size={14}/> REMOVE</button>
                         </div>
                       </div>
                     </td>
@@ -287,152 +283,244 @@ const PFMChart = ({ products, onDeleteProduct }: { products: Product[], onDelete
 
 const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) => {
   const [isUploading, setIsUploading] = useState(false);
-  const [extractedData, setExtractedData] = useState<Partial<Product> & { tiktokId?: string } | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [screenshot, setScreenshot] = useState<string | null>(null);
+  const [customThumbnail, setCustomThumbnail] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const thumbInputRef = useRef<HTMLInputElement>(null);
+
+  const [formData, setFormData] = useState<Partial<Product>>({
+    name: '',
+    tiktokId: '',
+    du: '00:00',
+    avgW: '00:00',
+    re: '0%',
+    vw: '0',
+    lk: '0',
+    bm: '0',
+    cm: '0',
+    sh: '0',
+    pfm: '0%',
+    cpm: '0',
+    cpe: '0',
+    mainProduct: 'Julaherb'
+  });
+
+  const handlePaste = (e: any) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const blob = items[i].getAsFile();
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const result = ev.target?.result as string;
+          // If form already has data, assume they are pasting a thumbnail.
+          // Otherwise, it's a screenshot for extraction.
+          if (formData.name && formData.name.length > 0) {
+            setCustomThumbnail(result);
+          } else {
+            setScreenshot(result);
+          }
+        };
+        reader.readAsDataURL(blob);
+      }
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [formData.name]);
 
   const processImage = async () => {
-    if (!imagePreview) return;
+    if (!screenshot) return;
     setIsUploading(true);
     setErrorMessage(null);
     try {
-      console.log("Starting extraction...");
-      const data = await extractProductFromImage(imagePreview);
-      console.log("Extraction success:", data);
-      data.mainProduct = 'Julaherb';
-      setExtractedData(data);
+      const data = await extractProductFromImage(screenshot);
+      setFormData(prev => ({ ...prev, ...data }));
     } catch (e: any) { 
-      console.error("Extraction error UI:", e);
-      setErrorMessage(e.message || "ระบบวิเคราะห์ข้อมูลล้มเหลว กรุณาลองใช้รูปที่ชัดเจนกว่านี้");
+      setErrorMessage(e.message || "Failed to process screenshot.");
     } finally { 
       setIsUploading(false); 
     }
   };
 
   const confirmAdd = () => {
-    if (extractedData) {
-      const p: Product = {
-        ...extractedData as Product,
-        id: Date.now(),
-        thumbnail: imagePreview || '',
-        status: 'unpinned',
-        date: new Date().toISOString()
-      };
-      onAddProduct(p);
-      setExtractedData(null); 
-      setImagePreview(null);
+    if (!formData.name || !formData.vw) {
+      setErrorMessage("Please fill at least Name and Views.");
+      return;
     }
+    const p: Product = {
+      ...(formData as Product),
+      id: Date.now(),
+      thumbnail: customThumbnail || screenshot || '',
+      status: 'unpinned',
+      date: new Date().toISOString()
+    };
+    onAddProduct(p);
+    resetForm();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f) {
-      const r = new FileReader();
-      r.onload = ev => setImagePreview(ev.target?.result as string);
-      r.readAsDataURL(f);
-      setExtractedData(null);
-      setErrorMessage(null);
-    }
+  const resetForm = () => {
+    setFormData({
+      name: '', tiktokId: '', du: '00:00', avgW: '00:00', re: '0%', vw: '0', lk: '0', bm: '0', cm: '0', sh: '0', pfm: '0%', cpm: '0', cpe: '0', mainProduct: 'Julaherb'
+    });
+    setScreenshot(null);
+    setCustomThumbnail(null);
+    setErrorMessage(null);
   };
+
+  const InputField = ({ label, name, type = "text" }: { label: string, name: keyof Product, type?: string }) => (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-1">{label}</label>
+      <input 
+        type={type}
+        value={(formData as any)[name] || ''} 
+        onChange={e => setFormData({ ...formData, [name]: e.target.value })}
+        className="bg-gray-900/60 border border-gray-800 text-white font-bold py-2.5 px-4 rounded-xl focus:border-cyan-500 outline-none transition-all placeholder:text-gray-700 text-sm"
+        placeholder="..."
+      />
+    </div>
+  );
 
   return (
-    <div className="max-w-6xl mx-auto py-10 animate-in fade-in">
-       <div className="bg-[#1a1c20]/60 rounded-3xl border border-gray-800 p-12 shadow-2xl backdrop-blur-xl">
-          <div className="flex flex-col items-center mb-10">
-            <div className="p-4 bg-cyan-500/10 rounded-2xl mb-4 border border-cyan-500/20 text-cyan-400"><CloudUpload size={32} /></div>
-            <h2 className="text-3xl font-black text-white uppercase tracking-widest">Global Data Injection</h2>
-            <p className="text-gray-500 mt-1">AI-Powered TikTok Analytics Extraction</p>
+    <div className="max-w-7xl mx-auto py-6 animate-in fade-in">
+       <div className="bg-[#1a1c20]/60 rounded-3xl border border-gray-800 p-10 shadow-2xl backdrop-blur-xl">
+          
+          <div className="flex items-center justify-between mb-10 border-b border-gray-800 pb-8">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-cyan-500/10 rounded-xl text-cyan-400 border border-cyan-500/20"><Edit3 size={24} /></div>
+              <div>
+                <h2 className="text-2xl font-black text-white uppercase tracking-widest">Manual Data Entry</h2>
+                <p className="text-gray-500 text-xs font-medium">Extract from screenshot or fill manually. (Paste Image supported)</p>
+              </div>
+            </div>
+            <button onClick={resetForm} className="text-gray-500 hover:text-white transition-colors"><X size={24}/></button>
           </div>
 
           {errorMessage && (
             <div className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-4 text-red-400 text-sm animate-in zoom-in-95">
               <AlertCircle size={20} className="shrink-0" />
               <span>{errorMessage}</span>
-              <button onClick={() => setErrorMessage(null)} className="ml-auto text-red-300 hover:text-white"><X size={16}/></button>
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-            {/* Upload Area */}
-            <div 
-              onClick={() => !isUploading && fileInputRef.current?.click()} 
-              className={`aspect-[4/5] rounded-[2rem] border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all relative group ${imagePreview ? 'border-cyan-500/40 bg-black/40' : 'border-gray-800 hover:border-gray-600 bg-black/20'}`}
-            >
-                {imagePreview ? (
-                  <>
-                    <img src={imagePreview} className="w-full h-full object-cover rounded-[1.8rem]" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-[1.8rem]">
-                       <Camera size={40} className="text-white" />
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+            
+            {/* Left Column: Image Pickers */}
+            <div className="lg:col-span-4 flex flex-col gap-6">
+              
+              {/* Screenshot Box */}
+              <div className="flex flex-col gap-3">
+                <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] pl-1">1. AI Analysis Screenshot</span>
+                <div 
+                  onClick={() => fileInputRef.current?.click()} 
+                  className={`aspect-[4/3] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer relative overflow-hidden group transition-all ${screenshot ? 'border-cyan-500/50 bg-black/40' : 'border-gray-800 hover:border-gray-700 bg-black/20'}`}
+                >
+                  {screenshot ? (
+                    <>
+                      <img src={screenshot} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                        <Camera className="text-white" size={32} />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center gap-3 text-gray-600">
+                      <ImageIcon size={40} />
+                      <span className="text-[10px] font-bold uppercase tracking-widest">Select or Paste Screenshot</span>
                     </div>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center gap-4 text-gray-600">
-                    <ImageIcon size={60} strokeWidth={1} />
-                    <span className="text-xs font-bold uppercase tracking-widest">Click to select screenshot</span>
-                  </div>
-                )}
-                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+                  )}
+                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f){ const r=new FileReader(); r.onload=ev=>setScreenshot(ev.target?.result as string); r.readAsDataURL(f); }}} />
+                </div>
+                <button 
+                  disabled={!screenshot || isUploading} 
+                  onClick={processImage}
+                  className="w-full bg-cyan-500 hover:bg-cyan-400 py-3 rounded-xl font-black text-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 disabled:opacity-20"
+                >
+                  {isUploading ? <Loader2 className="animate-spin" size={16} /> : <Zap size={16} />} 
+                  {isUploading ? "Analysing..." : "AI Auto-Fill Form"}
+                </button>
+              </div>
+
+              {/* Thumbnail Box */}
+              <div className="flex flex-col gap-3 mt-4">
+                <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] pl-1">2. Display Thumbnail</span>
+                <div 
+                  onClick={() => thumbInputRef.current?.click()} 
+                  className={`aspect-[4/5] max-w-[160px] mx-auto rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer relative overflow-hidden transition-all ${customThumbnail ? 'border-emerald-500/50 bg-black/40' : 'border-gray-800 hover:border-gray-700 bg-black/20'}`}
+                >
+                  {customThumbnail ? (
+                    <img src={customThumbnail} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-gray-700">
+                      <Camera size={24} />
+                      <span className="text-[8px] font-bold uppercase tracking-widest">Paste Thumb</span>
+                    </div>
+                  )}
+                  <input type="file" ref={thumbInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f){ const r=new FileReader(); r.onload=ev=>setCustomThumbnail(ev.target?.result as string); r.readAsDataURL(f); }}} />
+                </div>
+              </div>
+
             </div>
 
-            {/* Action/Preview Area */}
-            <div className="flex flex-col h-full">
-               {!extractedData ? (
-                 <div className="flex flex-col justify-center h-full gap-6">
-                    <div className="p-6 bg-gray-900/40 rounded-2xl border border-white/5 space-y-4">
-                       <h4 className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Instructions</h4>
-                       <ul className="text-xs text-gray-500 space-y-2 list-disc pl-4">
-                          <li>ใช้รูปภาพ Screenshot จากหน้า TikTok Shop Analytics</li>
-                          <li>ควรเห็นชื่อคลิปและตัวเลขสถิติที่ชัดเจน</li>
-                          <li>AI จะสกัดข้อมูล DU, Views, Likes และ Metrics อื่นๆ อัตโนมัติ</li>
-                       </ul>
-                    </div>
-                    <button 
-                      disabled={!imagePreview || isUploading} 
-                      onClick={processImage} 
-                      className="w-full bg-cyan-500 hover:bg-cyan-400 py-10 rounded-[2rem] font-black uppercase text-black disabled:opacity-20 transition-all flex items-center justify-center gap-4 shadow-2xl shadow-cyan-500/20"
-                    >
-                       {isUploading ? (
-                         <>
-                           <Loader2 className="animate-spin" size={24} />
-                           <span>AI Analyzing Screenshot...</span>
-                         </>
-                       ) : (
-                         <>
-                           <Plus size={24} />
-                           <span>Process & Upload Data</span>
-                         </>
-                       )}
-                    </button>
-                 </div>
-               ) : (
-                 <div className="space-y-6 animate-in slide-in-from-right-10">
-                    <div className="bg-black/60 p-8 rounded-[2rem] border border-cyan-500/10 shadow-inner space-y-6">
-                       <div className="flex items-center gap-3 text-cyan-400 mb-4 border-b border-white/5 pb-4">
-                          <CheckCircle2 size={20} />
-                          <span className="font-black uppercase tracking-widest text-sm">Review Extraction</span>
-                       </div>
-                       
-                       <div className="space-y-4">
-                          <div>
-                            <span className="text-[10px] font-black text-gray-500 block uppercase mb-1">Content Name</span>
-                            <input value={extractedData.name || ''} onChange={e => setExtractedData({...extractedData, name: e.target.value})} className="bg-gray-900 border border-gray-800 text-white font-black w-full py-3 px-4 rounded-xl focus:border-cyan-500 outline-none" />
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-4">
-                             <div><span className="text-[10px] font-black text-gray-500 block uppercase mb-1">Views (VW)</span><input value={extractedData.vw || ''} onChange={e => setExtractedData({...extractedData, vw: e.target.value})} className="bg-gray-900 border border-gray-800 text-white font-black w-full py-3 px-4 rounded-xl outline-none" /></div>
-                             <div><span className="text-[10px] font-black text-gray-500 block uppercase mb-1">Score (PFM)</span><input value={extractedData.pfm || ''} onChange={e => setExtractedData({...extractedData, pfm: e.target.value})} className="bg-gray-900 border border-gray-800 text-white font-black w-full py-3 px-4 rounded-xl outline-none" /></div>
-                          </div>
-                       </div>
-                    </div>
-                    
-                    <div className="flex gap-4">
-                       <button onClick={() => setExtractedData(null)} className="flex-1 py-4 text-gray-500 font-bold uppercase text-[10px] hover:text-white border border-gray-800 rounded-2xl">Reset</button>
-                       <button onClick={confirmAdd} className="flex-[2] bg-emerald-500 hover:bg-emerald-400 py-4 rounded-2xl font-black text-black uppercase tracking-widest shadow-lg shadow-emerald-500/10">Broadcast to Global Pool</button>
-                    </div>
-                 </div>
-               )}
+            {/* Right Column: The Form */}
+            <div className="lg:col-span-8 space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 bg-black/20 p-8 rounded-3xl border border-white/5">
+                
+                <div className="col-span-1 md:col-span-2">
+                  <InputField label="Content Title / Headline" name="name" />
+                </div>
+
+                <InputField label="TikTok Video ID" name="tiktokId" />
+                
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-1">Main Brand</label>
+                  <select 
+                    value={formData.mainProduct}
+                    onChange={e => setFormData({...formData, mainProduct: e.target.value as any})}
+                    className="bg-gray-900 border border-gray-800 text-white font-bold py-2.5 px-4 rounded-xl focus:border-cyan-500 outline-none text-sm appearance-none"
+                  >
+                    <option value="Julaherb">Julaherb</option>
+                    <option value="JDENT">JDENT</option>
+                    <option value="Jarvit">Jarvit</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-3 col-span-1 md:col-span-2 gap-4 border-t border-white/5 pt-6 mt-2">
+                  <InputField label="Duration (DU)" name="du" />
+                  <InputField label="AVG. Watch (AVG.W)" name="avgW" />
+                  <InputField label="Retention (RE%)" name="re" />
+                </div>
+
+                <div className="grid grid-cols-3 col-span-1 md:col-span-2 gap-4">
+                  <InputField label="Views (VW)" name="vw" />
+                  <InputField label="Likes (LK)" name="lk" />
+                  <InputField label="Bookmark (BM)" name="bm" />
+                </div>
+
+                <div className="grid grid-cols-3 col-span-1 md:col-span-2 gap-4">
+                  <InputField label="Comment (CM)" name="cm" />
+                  <InputField label="Shares (SH)" name="sh" />
+                  <InputField label="Score (PFM%)" name="pfm" />
+                </div>
+
+                <div className="grid grid-cols-2 col-span-1 md:col-span-2 gap-4 border-t border-white/5 pt-6">
+                  <InputField label="CPM (THB)" name="cpm" />
+                  <InputField label="CPE (THB)" name="cpe" />
+                </div>
+
+              </div>
+
+              <div className="flex gap-4">
+                 <button onClick={resetForm} className="flex-1 py-5 text-gray-500 font-black uppercase text-xs tracking-widest border border-gray-800 rounded-2xl hover:text-white transition-all">Clear Form</button>
+                 <button onClick={confirmAdd} className="flex-[2] bg-emerald-500 hover:bg-emerald-400 py-5 rounded-2xl font-black text-black uppercase tracking-widest shadow-xl shadow-emerald-500/10 transition-all flex items-center justify-center gap-3">
+                    <CheckCircle2 size={20} /> Broadcast to Global Pool
+                 </button>
+              </div>
             </div>
+
           </div>
        </div>
     </div>
@@ -450,7 +538,6 @@ const App: React.FC = () => {
 
   const isConfigured = GOOGLE_SHEET_APP_URL.startsWith('http');
 
-  // Load from Cloud
   const performFetch = async (silent = false) => {
     if (!silent) setSyncStatus('syncing');
     const cloudData = await loadFromGoogleSheet();
@@ -464,10 +551,8 @@ const App: React.FC = () => {
     }
   };
 
-  // 1. Initial Load: Fetch from Cloud ONLY on mount
   useEffect(() => {
     const initFetch = async () => {
-      // First try to show what we have in local cache for speed
       const local = localStorage.getItem('pfm_cache');
       if (local) setProducts(JSON.parse(local));
       else setProducts(INITIAL_PRODUCTS);
@@ -478,19 +563,16 @@ const App: React.FC = () => {
     initFetch();
   }, [isConfigured]);
 
-  // 2. Periodic Polling for Global Consistency across IPs
   useEffect(() => {
     if (!isConfigured) return;
     const interval = setInterval(() => {
-      // Only poll if we are not actively saving/uploading
       if (syncStatus !== 'saving' && activeTab === 'dashboard') {
         performFetch(true);
       }
-    }, 20000); // Polling every 20 seconds
+    }, 20000); 
     return () => clearInterval(interval);
   }, [isConfigured, syncStatus, activeTab]);
 
-  // 3. Helper to Broadcast Changes to Cloud
   const broadcastChanges = async (newProducts: Product[]) => {
     setSyncStatus('saving');
     localStorage.setItem('pfm_cache', JSON.stringify(newProducts));
@@ -500,11 +582,9 @@ const App: React.FC = () => {
       setLastSyncTime(new Date().toLocaleTimeString());
     } else {
       setSyncStatus('error');
-      alert("ไม่สามารถบันทึกข้อมูลไปที่ Cloud ได้ กรุณาตรวจสอบการเชื่อมต่อ");
     }
   };
 
-  // 4. Action Handlers
   const addProduct = (p: Product) => {
     const updated = [p, ...products];
     setProducts(updated);
@@ -525,10 +605,7 @@ const App: React.FC = () => {
           <div className="w-20 h-20 border-4 border-cyan-500/20 rounded-full"></div>
           <div className="w-20 h-20 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin absolute inset-0"></div>
         </div>
-        <div className="flex flex-col items-center gap-2">
-           <div className="text-cyan-400 font-black tracking-[0.5em] text-xs uppercase">Shared Repository</div>
-           <div className="text-gray-600 text-[10px] font-bold uppercase animate-pulse">Establishing Secure Uplink...</div>
-        </div>
+        <div className="text-cyan-400 font-black tracking-[0.5em] text-xs uppercase animate-pulse">Initializing Data Uplink...</div>
       </div>
     );
   }
@@ -538,7 +615,7 @@ const App: React.FC = () => {
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
       <div className="flex-1 flex flex-col">
         <TopBar 
-          title={activeTab === 'dashboard' ? 'Shared Live Matrix' : 'Cloud Entry Hub'} 
+          title={activeTab === 'dashboard' ? 'Performance Monitor' : 'Cloud Hub'} 
           syncStatus={syncStatus}
           lastSync={lastSyncTime}
         />
