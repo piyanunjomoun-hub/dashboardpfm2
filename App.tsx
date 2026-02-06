@@ -449,26 +449,46 @@ const App: React.FC = () => {
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
       <div className="flex-1 flex flex-col">
         <TopBar title={activeTab === 'dashboard' ? 'Real-time Analytics' : 'Content Media Hub'} />
-        <main className="ml-16 p-8 flex-1 overflow-y-auto">
-          <div className="max-w-[1500px] mx-auto space-y-8">
-            {activeTab === 'dashboard' ? (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  <div className="md:col-span-2 shadow-2xl"><MainKPICard /></div>
-                  <div className="bg-[#1a1c20] rounded-2xl border border-gray-800 p-8 flex flex-col items-center justify-center text-center gap-8 shadow-2xl relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <div className="w-24 h-24 rounded-full bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 shadow-inner group-hover:scale-105 transition-transform duration-500"><User size={48} className="text-cyan-400" /></div>
-                    <div className="relative z-10">
-                      <div className="font-black uppercase text-white tracking-[0.2em] text-lg">Administrator Panel</div>
-                      <div className="text-[9px] text-gray-500 font-black uppercase tracking-widest mt-2 opacity-60">Professional E-Commerce V2.0</div>
-                    </div>
-                  </div>
-                </div>
-                <PFMChart products={products} onDeleteProduct={deleteProduct} />
-              </>
-            ) : <UploadView onAddProduct={addProduct} />}
+        <main className="ml-16 p-0 flex-1 overflow-y-auto">
+  <div className="space-y-8">
+    {activeTab === "dashboard" ? (
+      <>
+        {/* KPI: full width */}
+        <div className="w-full">
+          <MainKPICard />
+        </div>
+
+        {/* Admin Panel: move below (optional) */}
+        <div className="px-8">
+          <div className="bg-[#1a1c20] rounded-2xl border border-gray-800 p-8 flex flex-col items-center justify-center text-center gap-8 shadow-2xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="w-24 h-24 rounded-full bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 shadow-inner group-hover:scale-105 transition-transform duration-500">
+              <User size={48} className="text-cyan-400" />
+            </div>
+            <div className="relative z-10">
+              <div className="font-black uppercase text-white tracking-[0.2em] text-lg">
+                Administrator Panel
+              </div>
+              <div className="text-[9px] text-gray-500 font-black uppercase tracking-widest mt-2 opacity-60">
+                Professional E-Commerce V2.0
+              </div>
+            </div>
           </div>
-        </main>
+        </div>
+
+        {/* Table */}
+        <div className="px-8 pb-10">
+          <PFMChart products={products} onDeleteProduct={deleteProduct} />
+        </div>
+      </>
+    ) : (
+      <div className="px-8 pb-10">
+        <UploadView onAddProduct={addProduct} />
+      </div>
+    )}
+  </div>
+</main>
+
       </div>
     </div>
   );
