@@ -304,8 +304,6 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
         const reader = new FileReader();
         reader.onload = (ev) => {
           const result = ev.target?.result as string;
-          // Priority logic: If Screenshot is empty, fill it. 
-          // If we already have a name (extracted or manual), fill the Thumbnail slot.
           if (!screenshot) {
             setScreenshot(result);
             setErrorMessage(null);
@@ -331,6 +329,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
       const data = await extractProductFromImage(screenshot);
       setFormData(prev => ({ ...prev, ...data }));
     } catch (e: any) { 
+      // Enhanced error visibility for quota issues
       setErrorMessage(e.message || "Extraction failed. Try a clearer image.");
     } finally { 
       setIsUploading(false); 
@@ -339,7 +338,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
 
   const confirmAdd = () => {
     if (!formData.name || !formData.vw) {
-      setErrorMessage("Required: Name and Views.");
+      setErrorMessage("Required: Name and Views are mandatory.");
       return;
     }
     const p: Product = {
@@ -390,10 +389,16 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
           </div>
 
           {errorMessage && (
-            <div className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-4 text-red-400 text-sm animate-in slide-in-from-top-2">
-              <AlertCircle size={20} className="shrink-0" />
-              <span>{errorMessage}</span>
-              <button onClick={() => setErrorMessage(null)} className="ml-auto opacity-50 hover:opacity-100"><X size={16}/></button>
+            <div className="mb-8 p-6 bg-red-500/10 border-2 border-red-500/30 rounded-3xl flex items-start gap-5 text-red-200 text-sm animate-in slide-in-from-top-4 shadow-[0_0_30px_rgba(239,68,68,0.1)]">
+              <AlertCircle size={28} className="shrink-0 text-red-500" />
+              <div className="flex flex-col gap-1">
+                <span className="font-black uppercase tracking-widest text-red-500 text-xs">Extraction Notice</span>
+                <p className="font-medium leading-relaxed">{errorMessage}</p>
+                {errorMessage.includes("โควต้า") && (
+                  <p className="text-[10px] mt-2 text-gray-400 italic">คำแนะนำ: เนื่องจากใช้เวอร์ชันฟรี โควต้าการประมวลผลต่อนาทีอาจเต็มชั่วคราว กรุณาพักหน้าจอไว้ 1-2 นาทีแล้วลองกด Extract ใหม่ครับ</p>
+                )}
+              </div>
+              <button onClick={() => setErrorMessage(null)} className="ml-auto opacity-50 hover:opacity-100 p-1"><X size={18}/></button>
             </div>
           )}
 
@@ -402,11 +407,11 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
             <div className="lg:col-span-4 flex flex-col gap-8">
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between px-1">
-                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">1. Analysis Source</span>
+                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">1. Analysis Source (Analytics Image)</span>
                    {screenshot && <button onClick={() => setScreenshot(null)} className="text-[10px] text-red-500 font-bold uppercase hover:underline">Remove</button>}
                 </div>
                 <div 
-                  onClick={() => fileInputRef.current?.click()} 
+                  onClick={() => !isUploading && fileInputRef.current?.click()} 
                   className={`aspect-[4/3] rounded-3xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer relative overflow-hidden group transition-all shadow-inner ${screenshot ? 'border-cyan-500/50 bg-black/40' : 'border-gray-800 hover:border-cyan-500/30 bg-black/20'}`}
                 >
                   {screenshot ? (
@@ -434,13 +439,13 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
                   className="w-full bg-cyan-500 hover:bg-cyan-400 active:scale-[0.98] py-4 rounded-2xl font-black text-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 shadow-lg shadow-cyan-500/20 disabled:opacity-20 transition-all"
                 >
                   {isUploading ? <Loader2 className="animate-spin" size={18} /> : <Zap size={18} />} 
-                  {isUploading ? "Analysing Screenshot..." : "Extract Data with AI"}
+                  {isUploading ? "AI Extracting Data..." : "Extract Data with AI"}
                 </button>
               </div>
 
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between px-1">
-                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">2. Video Thumbnail</span>
+                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">2. Video Thumbnail (Display Only)</span>
                    {customThumbnail && <button onClick={() => setCustomThumbnail(null)} className="text-[10px] text-red-500 font-bold uppercase hover:underline">Remove</button>}
                 </div>
                 <div 
