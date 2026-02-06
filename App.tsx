@@ -347,8 +347,8 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
       data.mainProduct = 'Julaherb';
       setExtractedData(data);
     } catch (e: any) { 
-      console.error("OCR API Error:", e);
-      let displayError = e.message || "Error processing image";
+      console.error("Extraction Logic Error:", e);
+      let displayError = e.message || "Extraction failed. Please ensure the screenshot is clear.";
       setErrorMessage(displayError);
     } finally { 
       setIsUploading(false); 
@@ -385,6 +385,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
             <div className="flex flex-col">
               <span className="text-sm font-black uppercase tracking-widest">OCR Extraction Failure</span>
               <span className="text-xs opacity-90 font-medium break-all">{errorMessage}</span>
+              <button onClick={processImage} className="text-[10px] uppercase font-black text-cyan-400 mt-2 hover:underline">Try again with the same image</button>
             </div>
           </div>
         )}
@@ -429,7 +430,8 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
             {isUploading && (
               <div className="h-full flex flex-col items-center justify-center py-24 bg-black/20 rounded-[2.5rem] border border-white/5 shadow-inner">
                 <Loader2 size={80} className="text-cyan-400 animate-spin mb-10" />
-                <p className="text-cyan-400 font-black uppercase text-sm tracking-[0.5em] animate-pulse">Broadcasting Data...</p>
+                <p className="text-cyan-400 font-black uppercase text-sm tracking-[0.5em] animate-pulse">Scanning with Pro Vision AI...</p>
+                <span className="text-[10px] text-gray-600 mt-2">This may take a few seconds more for high-accuracy extraction</span>
               </div>
             )}
             
@@ -504,7 +506,6 @@ const App: React.FC = () => {
     
     const data = await loadFromGoogleSheet();
     if (data && Array.isArray(data)) {
-      // For shared experience, we overwrite local products with sheet data
       setProducts(data);
       setSyncStatus('synced');
       setLastSyncTime(new Date().toLocaleTimeString());
@@ -513,32 +514,21 @@ const App: React.FC = () => {
     }
   };
 
-  // Initial Sync from Google Sheet on Mount
   useEffect(() => {
     performGlobalLoad();
   }, [isConfigured]);
 
-  // Periodic Polling to keep ALL users in sync
   useEffect(() => {
     if (!isConfigured) return;
-    
-    // Poll every 30 seconds for new data from other users
     const intervalId = setInterval(() => {
-      performGlobalLoad(true); // silent refresh
-    }, 30,000); 
+      performGlobalLoad(true); 
+    }, 30000); 
 
     return () => clearInterval(intervalId);
   }, [isConfigured]);
 
-  // Sync LOCAL changes to Google Sheet (Debounced)
-  const skipSyncRef = useRef(false);
   useEffect(() => {
     if (!isConfigured) return;
-    
-    // Check if we should skip this sync (to avoid infinite loops with polling)
-    // In this simple architecture, we just sync whenever local state changes.
-    // Local changes happen when user Adds or Deletes.
-    
     localStorage.setItem('pfm_dashboard_products', JSON.stringify(products));
     
     setSyncStatus('syncing');
