@@ -3,39 +3,33 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   BarChart3, 
   LayoutDashboard, 
-  BookOpen, 
   Settings, 
   Search, 
   TrendingUp, 
-  ExternalLink, 
   Heart, 
   Bookmark, 
   Share2, 
   Eye, 
   MessageCircle, 
   Camera, 
-  User, 
   ChevronDown, 
   CloudUpload, 
   CheckCircle2, 
   Loader2, 
   Trash2, 
   Plus, 
-  ClipboardPaste, 
   X, 
   Image as ImageIcon, 
-  Video,
   Layers,
   Clock,
   AlertCircle,
   RefreshCw,
   Globe,
-  Copy,
-  Link,
   Database,
   ShieldCheck,
   Zap,
-  Edit3
+  Edit3,
+  MousePointer2
 } from 'lucide-react';
 import { 
   PRODUCTS as INITIAL_PRODUCTS, 
@@ -44,10 +38,8 @@ import {
 import { extractProductFromImage } from './geminiService';
 import { Product } from './types';
 
-// --- Google Sheets Configuration ---
 const GOOGLE_SHEET_APP_URL = 'https://script.google.com/macros/s/AKfycbyhOTmeDg40xgOSo_V3ndtzx0FcLfjl_uZrsAu4dPEzZuVE1LRNlr1FkDLK30bvZZdTlQ/exec'; 
 
-// --- Cloud API Wrappers ---
 const saveToGoogleSheet = async (data: Product[]) => {
   if (!GOOGLE_SHEET_APP_URL || GOOGLE_SHEET_APP_URL.includes('YOUR_')) return false;
   try {
@@ -79,8 +71,6 @@ const loadFromGoogleSheet = async () => {
   }
 };
 
-// --- Sub-Components ---
-
 const Sidebar = ({ activeTab, onTabChange }: { activeTab: string, onTabChange: (tab: string) => void }) => (
   <div className="w-16 bg-[#1a1c20] border-r border-gray-800 flex flex-col items-center py-6 gap-8 fixed h-full z-20">
     <div className="w-8 h-8 bg-cyan-500 rounded-lg mb-4 flex items-center justify-center shadow-lg shadow-cyan-500/20">
@@ -100,7 +90,7 @@ const TopBar = ({ title, syncStatus, lastSync }: { title: string, syncStatus: st
       <span className="text-gray-400 text-sm font-medium tracking-wide uppercase">{title}</span>
       <div className="flex items-center gap-2 bg-gray-800/50 px-3 py-1 rounded-full text-[10px] font-bold text-cyan-400 border border-cyan-500/20">
         <Globe size={12} className="animate-pulse" />
-        <span>GLOBAL DATABASE</span>
+        <span>GLOBAL SYNC</span>
       </div>
     </div>
     <div className="flex items-center gap-5">
@@ -109,7 +99,7 @@ const TopBar = ({ title, syncStatus, lastSync }: { title: string, syncStatus: st
         {syncStatus === 'syncing' && <div className="flex items-center gap-2 text-[10px] font-black text-cyan-400 animate-pulse"><RefreshCw size={12} className="animate-spin" /> FETCHING...</div>}
         {syncStatus === 'saving' && <div className="flex items-center gap-2 text-[10px] font-black text-orange-400 animate-pulse"><CloudUpload size={12} /> BROADCASTING...</div>}
         {syncStatus === 'synced' && <div className="flex items-center gap-2 text-[10px] font-black text-emerald-400"><ShieldCheck size={12} /> SYNCED</div>}
-        {syncStatus === 'error' && <div className="flex items-center gap-2 text-[10px] font-black text-red-400"><AlertCircle size={12} /> ERR</div>}
+        {syncStatus === 'error' && <div className="flex items-center gap-2 text-[10px] font-black text-red-400"><AlertCircle size={12} /> ERROR</div>}
       </div>
     </div>
   </div>
@@ -151,15 +141,13 @@ const DatabaseStatusCard = ({ isConfigured }: { isConfigured: boolean }) => (
     
     <div className="flex flex-col gap-5 py-4 flex-1 justify-center">
       {isConfigured ? (
-        <>
-          <div className="flex items-center gap-4 bg-emerald-500/10 border border-emerald-500/20 p-5 rounded-2xl shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-             <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center text-black shrink-0"><Zap size={28} /></div>
-             <div className="flex flex-col">
-               <span className="text-emerald-400 font-black text-xs uppercase tracking-widest">Global Sync: Active</span>
-               <span className="text-gray-500 text-[10px] font-medium uppercase mt-0.5">Everyone sees the same data</span>
-             </div>
-          </div>
-        </>
+        <div className="flex items-center gap-4 bg-emerald-500/10 border border-emerald-500/20 p-5 rounded-2xl shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+           <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center text-black shrink-0"><Zap size={28} /></div>
+           <div className="flex flex-col">
+             <span className="text-emerald-400 font-black text-xs uppercase tracking-widest">Global Sync: Active</span>
+             <span className="text-gray-500 text-[10px] font-medium uppercase mt-0.5">Shared across sessions</span>
+           </div>
+        </div>
       ) : (
         <div className="flex flex-col items-center gap-4 text-center py-6">
            <AlertCircle size={48} className="text-orange-500/40" />
@@ -207,7 +195,7 @@ const PFMChart = ({ products, onDeleteProduct }: { products: Product[], onDelete
               </div>
             )}
           </div>
-          <div className="relative"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search..." className="bg-gray-800 text-xs py-2 pl-9 pr-4 rounded-xl border border-gray-700 w-48 outline-none" /></div>
+          <div className="relative"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Filter..." className="bg-gray-800 text-xs py-2 pl-9 pr-4 rounded-xl border border-gray-700 w-48 outline-none" /></div>
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -215,7 +203,7 @@ const PFMChart = ({ products, onDeleteProduct }: { products: Product[], onDelete
           <thead className="bg-[#16181b] text-[10px] text-gray-500 uppercase font-black tracking-widest">
             <tr>
               <th className="px-4 py-4 text-center">#</th>
-              <th className="px-6 py-4">Content Information</th>
+              <th className="px-6 py-4">Content</th>
               <th className="px-4 py-4 text-center">DU.</th>
               <th className="px-4 py-4 text-center">AVG.W</th>
               <th className="px-4 py-4 text-center">RE. %</th>
@@ -266,7 +254,7 @@ const PFMChart = ({ products, onDeleteProduct }: { products: Product[], onDelete
                           <span className="text-emerald-400 font-bold">฿{p.cpe}</span>
                         </div>
                         <div className="ml-auto">
-                           <button onClick={(e) => { e.stopPropagation(); if(confirm('Delete from global pool?')) onDeleteProduct(p.id); }} className="text-red-500 text-[10px] font-black uppercase flex items-center gap-2"><Trash2 size={14}/> REMOVE</button>
+                           <button onClick={(e) => { e.stopPropagation(); if(confirm('Delete from global pool?')) onDeleteProduct(p.id); }} className="text-red-500 text-[10px] font-black uppercase hover:text-red-400 flex items-center gap-2 transition-colors"><Trash2 size={14}/> REMOVE</button>
                         </div>
                       </div>
                     </td>
@@ -306,6 +294,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
     mainProduct: 'Julaherb'
   });
 
+  // Unified paste handler
   const handlePaste = (e: any) => {
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -315,12 +304,13 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
         const reader = new FileReader();
         reader.onload = (ev) => {
           const result = ev.target?.result as string;
-          // If form already has data, assume they are pasting a thumbnail.
-          // Otherwise, it's a screenshot for extraction.
-          if (formData.name && formData.name.length > 0) {
-            setCustomThumbnail(result);
-          } else {
+          // Priority logic: If Screenshot is empty, fill it. 
+          // If we already have a name (extracted or manual), fill the Thumbnail slot.
+          if (!screenshot) {
             setScreenshot(result);
+            setErrorMessage(null);
+          } else {
+            setCustomThumbnail(result);
           }
         };
         reader.readAsDataURL(blob);
@@ -331,7 +321,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
   useEffect(() => {
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
-  }, [formData.name]);
+  }, [screenshot]);
 
   const processImage = async () => {
     if (!screenshot) return;
@@ -341,7 +331,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
       const data = await extractProductFromImage(screenshot);
       setFormData(prev => ({ ...prev, ...data }));
     } catch (e: any) { 
-      setErrorMessage(e.message || "Failed to process screenshot.");
+      setErrorMessage(e.message || "Extraction failed. Try a clearer image.");
     } finally { 
       setIsUploading(false); 
     }
@@ -349,7 +339,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
 
   const confirmAdd = () => {
     if (!formData.name || !formData.vw) {
-      setErrorMessage("Please fill at least Name and Views.");
+      setErrorMessage("Required: Name and Views.");
       return;
     }
     const p: Product = {
@@ -372,11 +362,10 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
     setErrorMessage(null);
   };
 
-  const InputField = ({ label, name, type = "text" }: { label: string, name: keyof Product, type?: string }) => (
+  const InputField = ({ label, name }: { label: string, name: keyof Product }) => (
     <div className="flex flex-col gap-1.5">
       <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-1">{label}</label>
       <input 
-        type={type}
         value={(formData as any)[name] || ''} 
         onChange={e => setFormData({ ...formData, [name]: e.target.value })}
         className="bg-gray-900/60 border border-gray-800 text-white font-bold py-2.5 px-4 rounded-xl focus:border-cyan-500 outline-none transition-all placeholder:text-gray-700 text-sm"
@@ -386,97 +375,102 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
   );
 
   return (
-    <div className="max-w-7xl mx-auto py-6 animate-in fade-in">
-       <div className="bg-[#1a1c20]/60 rounded-3xl border border-gray-800 p-10 shadow-2xl backdrop-blur-xl">
+    <div className="max-w-7xl mx-auto py-6 animate-in fade-in zoom-in-95 duration-500">
+       <div className="bg-[#1a1c20]/60 rounded-[2.5rem] border border-gray-800 p-10 shadow-2xl backdrop-blur-xl">
           
           <div className="flex items-center justify-between mb-10 border-b border-gray-800 pb-8">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-cyan-500/10 rounded-xl text-cyan-400 border border-cyan-500/20"><Edit3 size={24} /></div>
+              <div className="p-3 bg-cyan-500/10 rounded-2xl text-cyan-400 border border-cyan-500/20"><Edit3 size={24} /></div>
               <div>
-                <h2 className="text-2xl font-black text-white uppercase tracking-widest">Manual Data Entry</h2>
-                <p className="text-gray-500 text-xs font-medium">Extract from screenshot or fill manually. (Paste Image supported)</p>
+                <h2 className="text-2xl font-black text-white uppercase tracking-widest">Global Data Entry</h2>
+                <p className="text-gray-500 text-xs font-medium">Auto-extract from screenshot or fill manually. (Ctrl+V to paste)</p>
               </div>
             </div>
-            <button onClick={resetForm} className="text-gray-500 hover:text-white transition-colors"><X size={24}/></button>
+            <button onClick={resetForm} className="text-gray-600 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-full"><X size={24}/></button>
           </div>
 
           {errorMessage && (
-            <div className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-4 text-red-400 text-sm animate-in zoom-in-95">
+            <div className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-4 text-red-400 text-sm animate-in slide-in-from-top-2">
               <AlertCircle size={20} className="shrink-0" />
               <span>{errorMessage}</span>
+              <button onClick={() => setErrorMessage(null)} className="ml-auto opacity-50 hover:opacity-100"><X size={16}/></button>
             </div>
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
             
-            {/* Left Column: Image Pickers */}
-            <div className="lg:col-span-4 flex flex-col gap-6">
-              
-              {/* Screenshot Box */}
+            <div className="lg:col-span-4 flex flex-col gap-8">
               <div className="flex flex-col gap-3">
-                <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] pl-1">1. AI Analysis Screenshot</span>
+                <div className="flex items-center justify-between px-1">
+                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">1. Analysis Source</span>
+                   {screenshot && <button onClick={() => setScreenshot(null)} className="text-[10px] text-red-500 font-bold uppercase hover:underline">Remove</button>}
+                </div>
                 <div 
                   onClick={() => fileInputRef.current?.click()} 
-                  className={`aspect-[4/3] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer relative overflow-hidden group transition-all ${screenshot ? 'border-cyan-500/50 bg-black/40' : 'border-gray-800 hover:border-gray-700 bg-black/20'}`}
+                  className={`aspect-[4/3] rounded-3xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer relative overflow-hidden group transition-all shadow-inner ${screenshot ? 'border-cyan-500/50 bg-black/40' : 'border-gray-800 hover:border-cyan-500/30 bg-black/20'}`}
                 >
                   {screenshot ? (
                     <>
-                      <img src={screenshot} className="w-full h-full object-cover" />
+                      <img src={screenshot} className="w-full h-full object-contain" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
                         <Camera className="text-white" size={32} />
                       </div>
                     </>
                   ) : (
-                    <div className="flex flex-col items-center gap-3 text-gray-600">
-                      <ImageIcon size={40} />
-                      <span className="text-[10px] font-bold uppercase tracking-widest">Select or Paste Screenshot</span>
+                    <div className="flex flex-col items-center gap-4 text-gray-600 group-hover:text-gray-400">
+                      <ImageIcon size={48} strokeWidth={1.5} />
+                      <div className="text-center">
+                         <span className="text-[10px] font-black uppercase tracking-widest block">Select Image</span>
+                         <span className="text-[8px] font-bold uppercase text-gray-700 group-hover:text-gray-500">or paste screenshot</span>
+                      </div>
                     </div>
                   )}
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f){ const r=new FileReader(); r.onload=ev=>setScreenshot(ev.target?.result as string); r.readAsDataURL(f); }}} />
                 </div>
+                
                 <button 
                   disabled={!screenshot || isUploading} 
                   onClick={processImage}
-                  className="w-full bg-cyan-500 hover:bg-cyan-400 py-3 rounded-xl font-black text-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 disabled:opacity-20"
+                  className="w-full bg-cyan-500 hover:bg-cyan-400 active:scale-[0.98] py-4 rounded-2xl font-black text-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 shadow-lg shadow-cyan-500/20 disabled:opacity-20 transition-all"
                 >
-                  {isUploading ? <Loader2 className="animate-spin" size={16} /> : <Zap size={16} />} 
-                  {isUploading ? "Analysing..." : "AI Auto-Fill Form"}
+                  {isUploading ? <Loader2 className="animate-spin" size={18} /> : <Zap size={18} />} 
+                  {isUploading ? "Analysing Screenshot..." : "Extract Data with AI"}
                 </button>
               </div>
 
-              {/* Thumbnail Box */}
-              <div className="flex flex-col gap-3 mt-4">
-                <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] pl-1">2. Display Thumbnail</span>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between px-1">
+                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">2. Video Thumbnail</span>
+                   {customThumbnail && <button onClick={() => setCustomThumbnail(null)} className="text-[10px] text-red-500 font-bold uppercase hover:underline">Remove</button>}
+                </div>
                 <div 
                   onClick={() => thumbInputRef.current?.click()} 
-                  className={`aspect-[4/5] max-w-[160px] mx-auto rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer relative overflow-hidden transition-all ${customThumbnail ? 'border-emerald-500/50 bg-black/40' : 'border-gray-800 hover:border-gray-700 bg-black/20'}`}
+                  className={`aspect-[4/5] w-full max-w-[200px] mx-auto rounded-3xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer relative overflow-hidden transition-all shadow-inner ${customThumbnail ? 'border-emerald-500/50 bg-black/40' : 'border-gray-800 hover:border-emerald-500/30 bg-black/20'}`}
                 >
                   {customThumbnail ? (
                     <img src={customThumbnail} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="flex flex-col items-center gap-2 text-gray-700">
-                      <Camera size={24} />
-                      <span className="text-[8px] font-bold uppercase tracking-widest">Paste Thumb</span>
+                    <div className="flex flex-col items-center gap-3 text-gray-600">
+                      <MousePointer2 size={24} />
+                      <span className="text-[9px] font-black uppercase text-center leading-tight">Drop or Paste<br/>Thumbnail Here</span>
                     </div>
                   )}
                   <input type="file" ref={thumbInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f){ const r=new FileReader(); r.onload=ev=>setCustomThumbnail(ev.target?.result as string); r.readAsDataURL(f); }}} />
                 </div>
               </div>
-
             </div>
 
-            {/* Right Column: The Form */}
             <div className="lg:col-span-8 space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 bg-black/20 p-8 rounded-3xl border border-white/5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6 bg-black/20 p-10 rounded-[2rem] border border-white/5 shadow-inner">
                 
                 <div className="col-span-1 md:col-span-2">
-                  <InputField label="Content Title / Headline" name="name" />
+                  <InputField label="Content Headline / Video Title" name="name" />
                 </div>
 
                 <InputField label="TikTok Video ID" name="tiktokId" />
                 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-1">Main Brand</label>
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-1">Target Brand</label>
                   <select 
                     value={formData.mainProduct}
                     onChange={e => setFormData({...formData, mainProduct: e.target.value as any})}
@@ -488,35 +482,35 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
                   </select>
                 </div>
 
-                <div className="grid grid-cols-3 col-span-1 md:col-span-2 gap-4 border-t border-white/5 pt-6 mt-2">
-                  <InputField label="Duration (DU)" name="du" />
-                  <InputField label="AVG. Watch (AVG.W)" name="avgW" />
-                  <InputField label="Retention (RE%)" name="re" />
+                <div className="grid grid-cols-3 col-span-1 md:col-span-2 gap-4 border-t border-white/5 pt-8 mt-2">
+                  <InputField label="DU." name="du" />
+                  <InputField label="AVG.W" name="avgW" />
+                  <InputField label="RE. %" name="re" />
                 </div>
 
                 <div className="grid grid-cols-3 col-span-1 md:col-span-2 gap-4">
-                  <InputField label="Views (VW)" name="vw" />
-                  <InputField label="Likes (LK)" name="lk" />
-                  <InputField label="Bookmark (BM)" name="bm" />
+                  <InputField label="VIEWS" name="vw" />
+                  <InputField label="LIKE" name="lk" />
+                  <InputField label="BM." name="bm" />
                 </div>
 
                 <div className="grid grid-cols-3 col-span-1 md:col-span-2 gap-4">
-                  <InputField label="Comment (CM)" name="cm" />
-                  <InputField label="Shares (SH)" name="sh" />
-                  <InputField label="Score (PFM%)" name="pfm" />
+                  <InputField label="CM." name="cm" />
+                  <InputField label="SH." name="sh" />
+                  <InputField label="SCORE %" name="pfm" />
                 </div>
 
-                <div className="grid grid-cols-2 col-span-1 md:col-span-2 gap-4 border-t border-white/5 pt-6">
+                <div className="grid grid-cols-2 col-span-1 md:col-span-2 gap-4 border-t border-white/5 pt-8">
                   <InputField label="CPM (THB)" name="cpm" />
                   <InputField label="CPE (THB)" name="cpe" />
                 </div>
 
               </div>
 
-              <div className="flex gap-4">
-                 <button onClick={resetForm} className="flex-1 py-5 text-gray-500 font-black uppercase text-xs tracking-widest border border-gray-800 rounded-2xl hover:text-white transition-all">Clear Form</button>
-                 <button onClick={confirmAdd} className="flex-[2] bg-emerald-500 hover:bg-emerald-400 py-5 rounded-2xl font-black text-black uppercase tracking-widest shadow-xl shadow-emerald-500/10 transition-all flex items-center justify-center gap-3">
-                    <CheckCircle2 size={20} /> Broadcast to Global Pool
+              <div className="flex gap-5">
+                 <button onClick={resetForm} className="flex-1 py-5 text-gray-500 font-black uppercase text-xs tracking-widest border border-gray-800 rounded-[1.5rem] hover:text-white hover:bg-white/5 transition-all">Clear Form</button>
+                 <button onClick={confirmAdd} className="flex-[2] bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] py-5 rounded-[1.5rem] font-black text-black uppercase tracking-widest shadow-xl shadow-emerald-500/10 transition-all flex items-center justify-center gap-3">
+                    <CheckCircle2 size={22} /> Commit to Global Cache
                  </button>
               </div>
             </div>
@@ -526,8 +520,6 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
     </div>
   );
 };
-
-// --- Main Application ---
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -605,7 +597,7 @@ const App: React.FC = () => {
           <div className="w-20 h-20 border-4 border-cyan-500/20 rounded-full"></div>
           <div className="w-20 h-20 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin absolute inset-0"></div>
         </div>
-        <div className="text-cyan-400 font-black tracking-[0.5em] text-xs uppercase animate-pulse">Initializing Data Uplink...</div>
+        <div className="text-cyan-400 font-black tracking-[0.5em] text-xs uppercase animate-pulse">Establishing Secure Sync...</div>
       </div>
     );
   }
@@ -615,7 +607,7 @@ const App: React.FC = () => {
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
       <div className="flex-1 flex flex-col">
         <TopBar 
-          title={activeTab === 'dashboard' ? 'Performance Monitor' : 'Cloud Hub'} 
+          title={activeTab === 'dashboard' ? 'Performance Monitor' : 'Global Pool Hub'} 
           syncStatus={syncStatus}
           lastSync={lastSyncTime}
         />
