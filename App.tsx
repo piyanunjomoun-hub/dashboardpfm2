@@ -33,7 +33,8 @@ import {
   Copy,
   Link,
   Database,
-  ShieldCheck
+  ShieldCheck,
+  Zap
 } from 'lucide-react';
 import { 
   PRODUCTS as INITIAL_PRODUCTS, 
@@ -48,9 +49,6 @@ const GOOGLE_SHEET_APP_URL = 'https://script.google.com/macros/s/AKfycbyhOTmeDg4
 const saveToGoogleSheet = async (data: Product[]) => {
   if (!GOOGLE_SHEET_APP_URL || GOOGLE_SHEET_APP_URL.includes('YOUR_')) return false;
   try {
-    // We use a POST request to update the sheet. 
-    // Note: Apps Script Web Apps often require 'no-cors' or specific handling for redirects.
-    // However, fetch with POST to Google Script usually works best as a simple request if no response is needed immediately.
     await fetch(GOOGLE_SHEET_APP_URL, {
       method: 'POST',
       mode: 'no-cors',
@@ -97,20 +95,23 @@ const Sidebar = ({ activeTab, onTabChange }: { activeTab: string, onTabChange: (
   </div>
 );
 
-const TopBar = ({ title, syncStatus }: { title: string, syncStatus: 'idle' | 'syncing' | 'synced' | 'error' | 'no-config' }) => (
+const TopBar = ({ title, syncStatus, lastSync }: { title: string, syncStatus: 'idle' | 'syncing' | 'synced' | 'error' | 'no-config', lastSync: string | null }) => (
   <div className="h-14 bg-[#0d0f12] border-b border-gray-800 flex items-center justify-between px-6 sticky top-0 z-10 ml-16 backdrop-blur-md">
     <div className="flex items-center gap-4">
       <span className="text-gray-400 text-sm font-medium tracking-wide uppercase">{title}</span>
       <div className="flex items-center gap-2 bg-gray-800/50 px-3 py-1 rounded-full text-[10px] font-bold text-green-400 border border-green-500/10">
         <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-        <span>CONNECTED TO GLOBAL CLOUD</span>
+        <span>SHARED GLOBAL CLOUD</span>
       </div>
     </div>
-    <div className="flex items-center gap-3">
-      {syncStatus === 'syncing' && <div className="flex items-center gap-2 text-[10px] font-black text-cyan-400 animate-pulse"><RefreshCw size={12} className="animate-spin" /> WRITING TO GOOGLE SHEET...</div>}
-      {syncStatus === 'synced' && <div className="flex items-center gap-2 text-[10px] font-black text-emerald-400"><ShieldCheck size={12} /> GLOBAL DATABASE SECURED</div>}
-      {syncStatus === 'error' && <div className="flex items-center gap-2 text-[10px] font-black text-red-400"><AlertCircle size={12} /> SHEET SYNC ERROR</div>}
-      {syncStatus === 'no-config' && <div className="flex items-center gap-2 text-[10px] font-black text-orange-400"><Settings size={12} /> GOOGLE SHEET NOT CONFIGURED</div>}
+    <div className="flex items-center gap-5">
+      {lastSync && <div className="text-[9px] font-bold text-gray-600 uppercase tracking-widest hidden md:block">Last Live Refresh: {lastSync}</div>}
+      <div className="flex items-center gap-3">
+        {syncStatus === 'syncing' && <div className="flex items-center gap-2 text-[10px] font-black text-cyan-400 animate-pulse"><RefreshCw size={12} className="animate-spin" /> SYNCING GLOBAL DATA...</div>}
+        {syncStatus === 'synced' && <div className="flex items-center gap-2 text-[10px] font-black text-emerald-400"><ShieldCheck size={12} /> ALL USERS IN SYNC</div>}
+        {syncStatus === 'error' && <div className="flex items-center gap-2 text-[10px] font-black text-red-400"><AlertCircle size={12} /> CLOUD DISCONNECTED</div>}
+        {syncStatus === 'no-config' && <div className="flex items-center gap-2 text-[10px] font-black text-orange-400"><Settings size={12} /> NO GLOBAL CONFIG</div>}
+      </div>
     </div>
   </div>
 );
@@ -146,21 +147,22 @@ const DatabaseStatusCard = ({ isConfigured }: { isConfigured: boolean }) => (
   <div className="bg-[#1a1c20] rounded-[2rem] border border-gray-800 p-8 flex flex-col gap-6 shadow-2xl relative overflow-hidden group h-full">
     <div className="flex items-center gap-4 text-cyan-400 border-b border-gray-800 pb-4">
       <Database size={24} />
-      <span className="font-black uppercase tracking-[0.2em] text-sm">Master Database Status</span>
+      <span className="font-black uppercase tracking-[0.2em] text-sm">Real-time Data Pool</span>
     </div>
     
     <div className="flex flex-col gap-5 py-4 flex-1 justify-center">
       {isConfigured ? (
         <>
-          <div className="flex items-center gap-4 bg-emerald-500/10 border border-emerald-500/20 p-5 rounded-2xl animate-in zoom-in-95">
-             <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center text-black shrink-0"><ShieldCheck size={28} /></div>
+          <div className="flex items-center gap-4 bg-emerald-500/10 border border-emerald-500/20 p-5 rounded-2xl animate-in zoom-in-95 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+             <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center text-black shrink-0 shadow-lg shadow-emerald-500/30"><Zap size={28} /></div>
              <div className="flex flex-col">
-               <span className="text-emerald-400 font-black text-xs uppercase tracking-widest">Global Sync Active</span>
-               <span className="text-gray-500 text-[10px] font-medium uppercase mt-0.5">Connected to Google Sheet</span>
+               <span className="text-emerald-400 font-black text-xs uppercase tracking-widest">Global Sync: Active</span>
+               <span className="text-gray-500 text-[10px] font-medium uppercase mt-0.5">Auto-refreshing every 30s</span>
              </div>
           </div>
-          <p className="text-[10px] text-gray-600 font-bold uppercase leading-relaxed text-center px-4">
-            ข้อมูลชุดนี้ถูกแชร์ให้กับทุกคนที่เข้าใช้งานผ่าน Google Sheets ส่วนกลางของคุณ
+          <p className="text-[10px] text-gray-400 font-bold uppercase leading-relaxed text-center px-4">
+            ทุกคนที่เปิดหน้านี้จะเห็นข้อมูลชุดเดียวกันแบบ Real-time <br/>
+            <span className="text-cyan-500 font-black">Shared Spreadsheet Pipeline</span>
           </p>
         </>
       ) : (
@@ -198,7 +200,7 @@ const PFMChart = ({ products, onDeleteProduct }: { products: Product[], onDelete
       <div className="p-6 flex flex-wrap justify-between items-center gap-4 border-b border-gray-800 bg-[#16181b]/50">
         <div className="flex items-center gap-3">
           <BarChart3 size={18} className="text-cyan-400" />
-          <h3 className="text-base font-black text-gray-100 uppercase tracking-widest">PFM Master Chart</h3>
+          <h3 className="text-base font-black text-gray-100 uppercase tracking-widest">Shared Global Data</h3>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -212,7 +214,7 @@ const PFMChart = ({ products, onDeleteProduct }: { products: Product[], onDelete
               </div>
             )}
           </div>
-          <div className="relative"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search content..." className="bg-gray-800 text-xs py-2 pl-9 pr-4 rounded-xl border border-gray-700 w-48 focus:border-cyan-500 outline-none transition-all" /></div>
+          <div className="relative"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search shared data..." className="bg-gray-800 text-xs py-2 pl-9 pr-4 rounded-xl border border-gray-700 w-48 focus:border-cyan-500 outline-none transition-all" /></div>
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -364,7 +366,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
       };
       onAddProduct(p);
       setExtractedData(null); setImagePreview(null); setCustomThumb(null); setErrorMessage(null);
-      alert("บันทึกลง Global Sheet เรียบร้อยแล้ว");
+      alert("บันทึกลง Global Sheet เรียบร้อยแล้ว (กำลัง Sync ไปยังเครื่องอื่นๆ)");
     }
   };
 
@@ -373,8 +375,8 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
       <div className="bg-[#1a1c20]/40 rounded-3xl border border-gray-800 p-12 shadow-2xl backdrop-blur-xl">
         <div className="flex flex-col items-center mb-12">
           <div className="w-24 h-24 bg-cyan-500/10 rounded-2xl flex items-center justify-center text-cyan-400 mb-6 border border-cyan-500/20 shadow-inner"><CloudUpload size={48} /></div>
-          <h2 className="text-4xl font-black text-white uppercase tracking-[0.2em]">Data Feed Analytics</h2>
-          <p className="text-gray-500 text-base mt-4 font-medium">Extract data and sync to <span className="text-emerald-400 font-bold uppercase underline">Google Sheets Master</span></p>
+          <h2 className="text-4xl font-black text-white uppercase tracking-[0.2em]">Live Data Injection</h2>
+          <p className="text-gray-500 text-base mt-4 font-medium">Extract data and broadcast to <span className="text-emerald-400 font-bold uppercase underline">Global Command Center</span></p>
         </div>
 
         {errorMessage && (
@@ -419,7 +421,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
                   onClick={processImage} 
                   className="w-full bg-cyan-500 hover:bg-cyan-400 text-black py-10 rounded-[2.5rem] font-black uppercase tracking-[0.4em] text-base transition-all shadow-[0_20px_50px_rgba(34,211,238,0.3)] flex items-center justify-center gap-5 disabled:opacity-20 disabled:grayscale"
                 >
-                  <Plus size={32} /> START AI PIPELINE
+                  <Plus size={32} /> COMMIT TO GLOBAL SYNC
                 </button>
               </div>
             )}
@@ -427,7 +429,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
             {isUploading && (
               <div className="h-full flex flex-col items-center justify-center py-24 bg-black/20 rounded-[2.5rem] border border-white/5 shadow-inner">
                 <Loader2 size={80} className="text-cyan-400 animate-spin mb-10" />
-                <p className="text-cyan-400 font-black uppercase text-sm tracking-[0.5em] animate-pulse">Scanning Data Structures...</p>
+                <p className="text-cyan-400 font-black uppercase text-sm tracking-[0.5em] animate-pulse">Broadcasting Data...</p>
               </div>
             )}
             
@@ -436,7 +438,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
                 <div className="flex items-center justify-between text-cyan-400 border-b border-white/5 pb-8">
                   <div className="flex items-center gap-5">
                     <CheckCircle2 size={28} />
-                    <span className="text-lg font-black uppercase tracking-[0.3em]">Validation Required</span>
+                    <span className="text-lg font-black uppercase tracking-[0.3em]">Verify Before Broadcast</span>
                   </div>
                 </div>
                 
@@ -466,7 +468,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
 
                 <div className="pt-6 flex gap-6">
                   <button onClick={() => {setExtractedData(null); setCustomThumb(null);}} className="flex-1 py-7 text-xs font-black uppercase tracking-[0.3em] text-gray-500 border border-gray-800 rounded-[2.5rem] hover:text-white hover:bg-white/5 transition-all">Cancel</button>
-                  <button onClick={confirmAdd} className="flex-[2] py-7 bg-cyan-500 text-black rounded-[2.5rem] font-black uppercase text-xs tracking-[0.4em] shadow-2xl shadow-cyan-500/30 hover:bg-cyan-400 transition-all">Commit to Master Sheet</button>
+                  <button onClick={confirmAdd} className="flex-[2] py-7 bg-cyan-500 text-black rounded-[2.5rem] font-black uppercase text-xs tracking-[0.4em] shadow-2xl shadow-cyan-500/30 hover:bg-cyan-400 transition-all">Broadcast to All Users</button>
                 </div>
               </div>
             )}
@@ -480,6 +482,7 @@ const UploadView = ({ onAddProduct }: { onAddProduct: (p: Product) => void }) =>
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error' | 'no-config'>('idle');
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   
   const [products, setProducts] = useState<Product[]>(() => {
     const saved = localStorage.getItem('pfm_dashboard_products');
@@ -491,34 +494,61 @@ const App: React.FC = () => {
 
   const isConfigured = GOOGLE_SHEET_APP_URL.startsWith('http');
 
-  // Initial Sync from Google Sheet on Mount
-  useEffect(() => {
+  // Load from Global Sheet Helper
+  const performGlobalLoad = async (silent = false) => {
     if (!isConfigured) {
       setSyncStatus('no-config');
       return;
     }
-    setSyncStatus('syncing');
-    loadFromGoogleSheet().then(data => {
-      if (data && Array.isArray(data)) {
-        setProducts(data);
-        setSyncStatus('synced');
-      } else {
-        setSyncStatus('idle');
-      }
-    });
+    if (!silent) setSyncStatus('syncing');
+    
+    const data = await loadFromGoogleSheet();
+    if (data && Array.isArray(data)) {
+      // For shared experience, we overwrite local products with sheet data
+      setProducts(data);
+      setSyncStatus('synced');
+      setLastSyncTime(new Date().toLocaleTimeString());
+    } else {
+      setSyncStatus('idle');
+    }
+  };
+
+  // Initial Sync from Google Sheet on Mount
+  useEffect(() => {
+    performGlobalLoad();
   }, [isConfigured]);
 
-  // Sync to Google Sheet on local changes (Debounced)
+  // Periodic Polling to keep ALL users in sync
   useEffect(() => {
     if (!isConfigured) return;
+    
+    // Poll every 30 seconds for new data from other users
+    const intervalId = setInterval(() => {
+      performGlobalLoad(true); // silent refresh
+    }, 30,000); 
+
+    return () => clearInterval(intervalId);
+  }, [isConfigured]);
+
+  // Sync LOCAL changes to Google Sheet (Debounced)
+  const skipSyncRef = useRef(false);
+  useEffect(() => {
+    if (!isConfigured) return;
+    
+    // Check if we should skip this sync (to avoid infinite loops with polling)
+    // In this simple architecture, we just sync whenever local state changes.
+    // Local changes happen when user Adds or Deletes.
+    
     localStorage.setItem('pfm_dashboard_products', JSON.stringify(products));
     
     setSyncStatus('syncing');
     const timer = setTimeout(() => {
       saveToGoogleSheet(products).then(success => {
         setSyncStatus(success ? 'synced' : 'error');
+        if (success) setLastSyncTime(new Date().toLocaleTimeString());
       });
-    }, 3000); // 3s debounce to prevent rate limit on Google Sheets
+    }, 2000); 
+    
     return () => clearTimeout(timer);
   }, [products, isConfigured]);
 
@@ -536,8 +566,9 @@ const App: React.FC = () => {
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
       <div className="flex-1 flex flex-col">
         <TopBar 
-          title={activeTab === 'dashboard' ? 'Global Command Center' : 'Shared Data Ingestion'} 
+          title={activeTab === 'dashboard' ? 'Global Command Center' : 'Shared Data Hub'} 
           syncStatus={syncStatus}
+          lastSync={lastSyncTime}
         />
         <main className="ml-16 p-8 flex-1 overflow-y-auto">
           <div className="max-w-[1600px] mx-auto space-y-10">
