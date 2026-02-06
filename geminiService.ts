@@ -30,25 +30,24 @@ async function withRetry<T>(fn: (attempt: number) => Promise<T>, maxRetries = 2,
   throw lastError;
 }
 
+/**
+ * Extracts TikTok shop analytics from an image using Gemini.
+ */
 export const extractProductFromImage = async (base64Image: string) => {
-  const apiKey = process.env.API_KEY;
-  
-  if (!apiKey || apiKey === "undefined" || apiKey.length < 10) {
-    throw new Error("API_KEY_MISSING: ไม่พบ API Key ในระบบกรุณาตรวจสอบการตั้งค่า");
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
-  
   // Extract clean base64 and mime type
   const mimeTypeMatch = base64Image.match(/^data:(image\/[a-z]+);base64,/);
   const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : "image/jpeg";
   const base64Data = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
 
   return withRetry(async () => {
+    // CRITICAL: Always initialize a new GoogleGenAI instance right before the call
+    // to ensure the most up-to-date API key is used.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
+    // Generate content with both image and text parts.
     const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview", // Upgraded for better multimodal reasoning
-      contents: [{
-        role: "user",
+      model: "gemini-3-pro-preview", // Complex multimodal reasoning task
+      contents: {
         parts: [
           {
             inlineData: {
@@ -73,7 +72,7 @@ export const extractProductFromImage = async (base64Image: string) => {
             Ensure numeric values are cleaned (remove 'K', 'M' symbols if possible or keep them consistently).`
           }
         ]
-      }],
+      },
       config: {
         systemInstruction: `You are an expert TikTok Data Scraper. Your goal is to extract metrics from screenshots with 100% precision. 
         Return ONLY a JSON object. 
@@ -105,8 +104,9 @@ export const extractProductFromImage = async (base64Image: string) => {
       }
     });
 
+    // Access the .text property directly (do not call as a method).
     const result = response.text;
-    if (!result) throw new Error("AI could not extract text from this image. Please ensure headers are visible.");
+    if (!result) throw new Error("AI could not extract text from this image. Please ensure the screenshot is clear.");
     
     try {
       return JSON.parse(result);
