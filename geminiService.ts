@@ -3,7 +3,6 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 /**
  * Handles retries with exponential backoff.
- * Especially useful for 429 (Rate Limit) errors.
  */
 async function withRetry<T>(fn: (attempt: number) => Promise<T>, maxRetries = 2, initialDelay = 3000): Promise<T> {
   let lastError: any;
@@ -32,10 +31,15 @@ async function withRetry<T>(fn: (attempt: number) => Promise<T>, maxRetries = 2,
 }
 
 export const extractProductFromImage = async (base64Image: string) => {
-  // Always get a fresh instance with the latest injected key
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  const apiKey = process.env.API_KEY;
   
-  // Detect mime type from data URL (e.g. "data:image/jpeg;base64,...")
+  if (!apiKey || apiKey === "undefined" || apiKey.length < 10) {
+    throw new Error("API_KEY_MISSING: ตัวแปร API_KEY ไม่ถูกตั้งค่าในระบบ (Environment Variable)");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+  
+  // Detect mime type correctly
   const mimeTypeMatch = base64Image.match(/^data:(image\/[a-z]+);base64,/);
   const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : "image/png";
   const base64Data = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
@@ -43,34 +47,37 @@ export const extractProductFromImage = async (base64Image: string) => {
   return withRetry(async () => {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: [
-        {
-          inlineData: {
-            mimeType: mimeType,
-            data: base64Data
-          }
-        },
-        {
-          text: `Extract performance metrics from this TikTok Shop Analytics row.
-          Return ONLY JSON:
+      contents: [{
+        role: "user",
+        parts: [
           {
-            "name": "content title",
-            "tiktokId": "19-digit id",
-            "du": "duration",
-            "avgW": "avg watch",
-            "re": "retention %",
-            "vw": "views",
-            "lk": "likes",
-            "bm": "bookmarks",
-            "cm": "comments",
-            "sh": "shares",
-            "pfm": "score",
-            "products": "count",
-            "cpm": "est value",
-            "cpe": "est value"
-          }`
-        }
-      ],
+            inlineData: {
+              mimeType: mimeType,
+              data: base64Data
+            }
+          },
+          {
+            text: `Extract performance metrics from this TikTok Shop Analytics row.
+            Return ONLY JSON:
+            {
+              "name": "content title",
+              "tiktokId": "19-digit id",
+              "du": "duration",
+              "avgW": "avg watch",
+              "re": "retention %",
+              "vw": "views",
+              "lk": "likes",
+              "bm": "bookmarks",
+              "cm": "comments",
+              "sh": "shares",
+              "pfm": "score",
+              "products": "count",
+              "cpm": "est value",
+              "cpe": "est value"
+            }`
+          }
+        ]
+      }],
       config: {
         responseMimeType: "application/json",
       }
